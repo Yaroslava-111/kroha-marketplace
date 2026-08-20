@@ -1,0 +1,17 @@
+# База данных SQLite (локальная разработка и тестовые данные)
+database/*.db
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+
+# Загруженные пользовательские фото
+uploads/*
+!uploads/.gitkeep
+
+# Логи и временные файлы
+*.log
+*.tmp
+
+# ОС / редакторы
+Thumbs.db
+.DS_Store
