@@ -190,7 +190,7 @@ function render_messages_section(PDO $pdo, int $meId): void
         <main class="chat-main">
             <?php if ($activeConv !== null && $other): ?>
                 <header class="chat-head">
-                    <a class="btn btn-secondary btn-back" href="<?= e(messages_url(false)) ?>" title="Ко всем диалогам" aria-label="Ко всем диалогам">
+                    <a class="icon-btn chat-back" href="<?= e(messages_url(false)) ?>" title="Ко всем диалогам" aria-label="Ко всем диалогам">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                     </a>
                     <a class="chat-user" href="profile.php?id=<?= (int) $other['id'] ?>">
@@ -207,9 +207,6 @@ function render_messages_section(PDO $pdo, int $meId): void
                     <?php else: ?>
                         <span class="chip chat-topic"><?= e($activeConv['subject']) ?></span>
                     <?php endif; ?>
-                    <button class="icon-btn chat-expand" id="chatExpand" type="button" title="На весь экран" aria-label="Развернуть чат на весь экран" aria-pressed="false">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
-                    </button>
                     <?php if ($activeConv['archived_at'] !== null): ?>
                         <form class="chat-arch-form" method="post" action="<?= e($base) ?>">
                             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -229,6 +226,9 @@ function render_messages_section(PDO $pdo, int $meId): void
                             </button>
                         </form>
                     <?php endif; ?>
+                    <button class="icon-btn chat-expand" id="chatExpand" type="button" title="На весь экран" aria-label="Развернуть чат на весь экран" aria-pressed="false">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+                    </button>
                 </header>
 
                 <div class="chat-thread" id="chatThread" aria-live="polite">
