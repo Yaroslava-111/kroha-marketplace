@@ -1065,7 +1065,16 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
     gap: 8px;
     align-self: center;
 }
-.ss-delete { color: var(--urgent); border-color: transparent; }
+.ss-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 41px;
+    height: 41px;
+    padding: 0;
+    color: var(--urgent);
+    border-color: transparent;
+}
 .ss-delete:hover { border-color: var(--urgent); background: #FBE3E0; }
 
 @media (max-width: 640px) {
