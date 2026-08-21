@@ -319,9 +319,14 @@ function render_messages_section(PDO $pdo, int $meId): void
     }
 
     var expandBtn = document.getElementById('chatExpand');
+    var wasCollapsedBeforeFs = false;
     function setChatFullscreen(on) {
         if (!chatApp) { return; }
         if (on && window.matchMedia('(max-width: 720px)').matches) { return; }
+        if (on) {
+            wasCollapsedBeforeFs = chatApp.classList.contains('side-collapsed');
+            chatApp.classList.remove('side-collapsed');
+        }
         chatApp.classList.toggle('is-fullscreen', on);
         expandBtn.setAttribute('aria-pressed', String(on));
         expandBtn.title = on ? 'Свернуть чат' : 'На весь экран';
@@ -335,6 +340,10 @@ function render_messages_section(PDO $pdo, int $meId): void
         } else {
             chatApp.style.top = '';
             chatApp.style.height = '';
+            if (wasCollapsedBeforeFs) {
+                chatApp.classList.add('side-collapsed');
+                wasCollapsedBeforeFs = false;
+            }
         }
     }
     if (chatApp && expandBtn) {
