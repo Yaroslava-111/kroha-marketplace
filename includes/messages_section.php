@@ -321,11 +321,21 @@ function render_messages_section(PDO $pdo, int $meId): void
     var expandBtn = document.getElementById('chatExpand');
     function setChatFullscreen(on) {
         if (!chatApp) { return; }
+        if (on && window.matchMedia('(max-width: 720px)').matches) { return; }
         chatApp.classList.toggle('is-fullscreen', on);
         expandBtn.setAttribute('aria-pressed', String(on));
         expandBtn.title = on ? 'Свернуть чат' : 'На весь экран';
         document.body.style.overflow = on ? 'hidden' : '';
-        if (on && msgInput) { msgInput.focus(); }
+        if (on) {
+            var hdr = document.querySelector('.site-header');
+            var topPx = hdr ? Math.ceil(hdr.getBoundingClientRect().bottom) : 0;
+            chatApp.style.top = topPx + 'px';
+            chatApp.style.height = 'calc(100dvh - ' + topPx + 'px)';
+            if (msgInput) { msgInput.focus(); }
+        } else {
+            chatApp.style.top = '';
+            chatApp.style.height = '';
+        }
     }
     if (chatApp && expandBtn) {
         expandBtn.addEventListener('click', function () {
@@ -336,6 +346,14 @@ function render_messages_section(PDO $pdo, int $meId): void
                 setChatFullscreen(false);
             }
         });
+        var mqChat = window.matchMedia('(max-width: 720px)');
+        var onMqChat = function (e) {
+            if (e.matches && chatApp.classList.contains('is-fullscreen')) {
+                setChatFullscreen(false);
+            }
+        };
+        if (mqChat.addEventListener) { mqChat.addEventListener('change', onMqChat); }
+        else if (mqChat.addListener) { mqChat.addListener(onMqChat); }
     }
 
     if (msgForm && msgInput) {

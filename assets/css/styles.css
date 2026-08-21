@@ -1332,18 +1332,20 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
     overflow: hidden;
 }
 .chat-head {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 12px;
     padding: 11px 16px;
     border-bottom: 2px dashed var(--line);
     background: var(--surface);
 }
 .btn-back { display: inline-flex; flex: none; }
-.chat-user { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); min-width: 0; }
+.chat-user { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); min-width: 0; flex: none; }
 .chat-user:hover .chat-user-name { color: var(--accent-dark); }
-.chat-user-info { display: flex; flex-direction: column; line-height: 1.2; }
-.chat-user-name { font-weight: 800; font-size: 15px; transition: color .12s ease; }
-.chat-user-sub { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
-.chat-topic { margin-left: auto; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-user-info { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.chat-user-name { font-weight: 800; font-size: 15px; transition: color .12s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-user-sub { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-topic { margin-left: auto; min-width: 48px; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-expand { flex: none; }
+.chat-arch-form { margin-left: 0; flex: none; }
 
 .chat-thread {
     flex: 1; min-height: 0; overflow-y: auto;
