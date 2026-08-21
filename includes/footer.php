@@ -1053,6 +1053,7 @@ document.querySelectorAll('.timer[data-end]').forEach(function (el) {
         btn.addEventListener('click', function () { dismiss(el); });
         el.appendChild(btn);
         if (el.classList.contains('alert-flash')) {
+            el.style.setProperty('--flash-ms', FLASH_MS + 'ms');
             setTimeout(function () { dismiss(el); }, FLASH_MS);
         }
     });

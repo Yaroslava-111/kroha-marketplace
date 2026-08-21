@@ -36,11 +36,11 @@ $unreadMsgs = $currentUser ? unread_messages_count($pdo, (int) $currentUser['id'
     <meta property="og:url" content="<?= e($canonicalUrl ?? $metaUrl) ?>">
     <link rel="canonical" href="<?= e($canonicalUrl ?? $metaUrl) ?>">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=<?= filemtime(__DIR__ . '/../assets/favicon.svg') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/styles.css?v=<?= filemtime(__DIR__ . '/../assets/css/styles.css') ?>">
 </head>
 <body<?= $currentUser ? ' data-logged="1"' : '' ?>>
 <?php $catalogType = (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'index.php' && in_array($active, ['all', 'items', 'auctions'], true)) ? $active : 'all'; ?>
