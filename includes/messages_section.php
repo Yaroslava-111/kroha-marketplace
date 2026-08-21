@@ -132,11 +132,14 @@ function render_messages_section(PDO $pdo, int $meId): void
     <div class="chat-app<?= $activeConv ? ' has-conv' : '' ?>">
         <aside class="chat-side">
             <div class="chat-side-head">
-                <span><?= $inArchive ? 'Архив' : 'Диалоги' ?></span>
+                <span class="chat-side-title"><?= $inArchive ? 'Архив' : 'Диалоги' ?></span>
                 <?php if (!$inArchive && $unreadTotal > 0): ?>
                     <span class="msg-badge"><?= $unreadTotal ?></span>
                 <?php endif; ?>
                 <span class="chat-side-toggle">
+                    <button class="icon-btn chat-collapse" id="chatCollapse" type="button" title="Свернуть список" aria-label="Свернуть список диалогов" aria-expanded="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><polyline points="14 9 12 12 14 15"/></svg>
+                    </button>
                     <?php if ($inArchive): ?>
                         <a class="icon-btn" href="<?= e(messages_url(false)) ?>" title="Вернуться к диалогам" aria-label="Вернуться к диалогам">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
@@ -204,6 +207,9 @@ function render_messages_section(PDO $pdo, int $meId): void
                     <?php else: ?>
                         <span class="chip chat-topic"><?= e($activeConv['subject']) ?></span>
                     <?php endif; ?>
+                    <button class="icon-btn chat-expand" id="chatExpand" type="button" title="На весь экран" aria-label="Развернуть чат на весь экран" aria-pressed="false">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+                    </button>
                     <?php if ($activeConv['archived_at'] !== null): ?>
                         <form class="chat-arch-form" method="post" action="<?= e($base) ?>">
                             <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
@@ -293,6 +299,45 @@ function render_messages_section(PDO $pdo, int $meId): void
     if (msgEnd && thread) { thread.scrollTop = thread.scrollHeight; }
     var msgForm = document.querySelector('.chat-compose');
     var msgInput = document.getElementById('msgText');
+    var chatApp = document.querySelector('.chat-app');
+
+    var collapseBtn = document.getElementById('chatCollapse');
+    if (chatApp && collapseBtn && window.matchMedia('(min-width: 721px)').matches) {
+        try {
+            if (localStorage.getItem('chatSideCollapsed') === '1') {
+                chatApp.classList.add('side-collapsed');
+                collapseBtn.setAttribute('aria-expanded', 'false');
+                collapseBtn.title = 'Развернуть список';
+            }
+        } catch (e) {}
+        collapseBtn.addEventListener('click', function () {
+            var collapsed = chatApp.classList.toggle('side-collapsed');
+            collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+            collapseBtn.title = collapsed ? 'Развернуть список' : 'Свернуть список';
+            try { localStorage.setItem('chatSideCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+        });
+    }
+
+    var expandBtn = document.getElementById('chatExpand');
+    function setChatFullscreen(on) {
+        if (!chatApp) { return; }
+        chatApp.classList.toggle('is-fullscreen', on);
+        expandBtn.setAttribute('aria-pressed', String(on));
+        expandBtn.title = on ? 'Свернуть чат' : 'На весь экран';
+        document.body.style.overflow = on ? 'hidden' : '';
+        if (on && msgInput) { msgInput.focus(); }
+    }
+    if (chatApp && expandBtn) {
+        expandBtn.addEventListener('click', function () {
+            setChatFullscreen(!chatApp.classList.contains('is-fullscreen'));
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && chatApp.classList.contains('is-fullscreen')) {
+                setChatFullscreen(false);
+            }
+        });
+    }
+
     if (msgForm && msgInput) {
         var msgSend = msgForm.querySelector('.chat-send');
         msgForm.addEventListener('submit', function () {
