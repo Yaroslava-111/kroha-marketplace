@@ -38,6 +38,75 @@ function first_photo(array $row): string
     return $photos[0] ?? placeholder_photo('Кроха');
 }
 
+function make_thumb(string $file, string $thumb, int $max = 640): bool
+{
+    if (!is_file($file) || !function_exists('imagecreatetruecolor')) {
+        return false;
+    }
+    $info = @getimagesize($file);
+    if ($info === false) {
+        return false;
+    }
+    [$w, $h] = $info;
+    if ($w <= $max && $h <= $max) {
+        return @copy($file, $thumb);
+    }
+    $scale = min($max / $w, $max / $h);
+    $nw = max(1, (int) round($w * $scale));
+    $nh = max(1, (int) round($h * $scale));
+    $src = match ($info['mime']) {
+        'image/jpeg' => @imagecreatefromjpeg($file),
+        'image/png' => @imagecreatefrompng($file),
+        'image/webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file) : false,
+        default => false,
+    };
+    if ($src === false) {
+        return false;
+    }
+    $dst = imagecreatetruecolor($nw, $nh);
+    if ($info['mime'] === 'image/png') {
+        imagealphablending($dst, false);
+        imagesavealpha($dst, true);
+    }
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+    $ok = match ($info['mime']) {
+        'image/jpeg' => imagejpeg($dst, $thumb, 82),
+        'image/png' => imagepng($dst, $thumb, 6),
+        'image/webp' => function_exists('imagewebp') ? imagewebp($dst, $thumb, 82) : false,
+        default => false,
+    };
+    imagedestroy($src);
+    imagedestroy($dst);
+    return (bool) $ok;
+}
+
+function thumb_of(string $photo): string
+{
+    if (!str_starts_with($photo, 'uploads/')) {
+        return $photo;
+    }
+    $t = 'uploads/t_' . basename($photo);
+    return is_file(__DIR__ . '/../' . $t) ? $t : $photo;
+}
+
+function card_photo(array $row): string
+{
+    $photos = photos_of($row);
+    if (!$photos) {
+        return placeholder_photo('Кроха');
+    }
+    return thumb_of($photos[0]);
+}
+
+function condition_is_new(?string $label): bool
+{
+    if ($label === null) {
+        return false;
+    }
+    $l = mb_strtolower(trim($label));
+    return in_array($l, ['новое', 'новый', 'новая', 'как новое', 'как новый', 'как новая'], true);
+}
+
 function seconds_until(?string $endAt): int
 {
     if ($endAt === null || $endAt === '') {
@@ -298,6 +367,7 @@ function save_photos(): array
             $errors[] = 'Не удалось сохранить файл №' . ($i + 1) . '.';
             continue;
         }
+        make_thumb($uploadDir . '/' . $name, $uploadDir . '/t_' . $name);
         $saved[] = 'uploads/' . $name;
     }
 
@@ -461,6 +531,24 @@ function notification_type_label(string $type): string
         'report' => 'Новая жалоба',
         'report_answered' => 'Ответ на жалобу',
         default => $type,
+    };
+}
+
+function notification_icon(string $type): string
+{
+    $svg = static fn(string $inner): string =>
+        '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $inner . '</svg>';
+
+    return match ($type) {
+        'outbid' => $svg('<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>'),
+        'win' => $svg('<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>'),
+        'bought' => $svg('<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>'),
+        'unsold' => $svg('<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'),
+        'review' => $svg('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+        'confirmed' => $svg('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'),
+        'report' => $svg('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
+        'report_answered' => $svg('<polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>'),
+        default => $svg('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'),
     };
 }
 

@@ -3,7 +3,7 @@ declare(strict_types=1);
 ?>
 <article class="card">
     <a class="card-media" href="auction.php?id=<?= (int) $a['id'] ?>" aria-label="<?= e($a['title']) ?>">
-        <img src="<?= e(first_photo($a)) ?>" alt="<?= e($a['title']) ?>" loading="lazy">
+        <img src="<?= e(card_photo($a)) ?>" alt="<?= e($a['title']) ?>" loading="lazy">
         <span class="badge badge-auction">Аукцион</span>
     </a>
     <?php if ($currentUser): ?>
@@ -21,7 +21,9 @@ declare(strict_types=1);
         <h3 class="card-title"><a href="auction.php?id=<?= (int) $a['id'] ?>"><?= e($a['title']) ?></a></h3>
         <div class="card-price">
             <?= money((int) $a['current_price']) ?>
-            <span class="muted small">старт <?= money((int) $a['start_price']) ?></span>
+            <?php if ((int) $a['bid_count'] > 0 && (int) $a['current_price'] !== (int) $a['start_price']): ?>
+                <span class="muted small">старт <?= money((int) $a['start_price']) ?></span>
+            <?php endif; ?>
         </div>
         <div class="card-meta">
             <span class="chip timer" data-end="<?= (int) strtotime($a['end_at']) ?>"><?= e(format_countdown(seconds_until($a['end_at']))) ?></span>

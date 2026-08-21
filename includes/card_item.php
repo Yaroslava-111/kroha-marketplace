@@ -3,9 +3,11 @@ declare(strict_types=1);
 ?>
 <article class="card">
     <a class="card-media" href="item.php?id=<?= (int) $it['id'] ?>" aria-label="<?= e($it['title']) ?>">
-        <img src="<?= e(first_photo($it)) ?>" alt="<?= e($it['title']) ?>" loading="lazy">
+        <img src="<?= e(card_photo($it)) ?>" alt="<?= e($it['title']) ?>" loading="lazy">
         <?php if ((int) $it['is_giveaway'] === 1): ?>
             <span class="badge badge-give">Отдам даром</span>
+        <?php elseif (condition_is_new($it['condition_label'])): ?>
+            <span class="badge badge-new">Новое</span>
         <?php else: ?>
             <span class="badge badge-used">б/у</span>
         <?php endif; ?>
@@ -30,7 +32,7 @@ declare(strict_types=1);
             <?php if ($it['size'] !== null && $it['size'] !== ''): ?>
                 <span class="chip">размер <?= e($it['size']) ?></span>
             <?php endif; ?>
-            <?php if ($it['condition_label'] !== null && $it['condition_label'] !== '' && mb_strtolower($it['condition_label']) !== 'б/у'): ?>
+            <?php if ($it['condition_label'] !== null && $it['condition_label'] !== '' && !in_array(mb_strtolower(trim($it['condition_label'])), ['б/у', 'новое', 'новый', 'новая'], true)): ?>
                 <span class="chip"><?= e($it['condition_label']) ?></span>
             <?php endif; ?>
         </div>

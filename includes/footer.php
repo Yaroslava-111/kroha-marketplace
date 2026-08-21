@@ -19,6 +19,17 @@
     <div class="post-modal-body" id="postModalBody"></div>
 </dialog>
 
+<dialog class="lightbox" id="lightbox" aria-label="Просмотр фотографии">
+    <button class="lightbox-close" type="button" aria-label="Закрыть">×</button>
+    <button class="lightbox-nav lightbox-prev" type="button" aria-label="Предыдущее фото">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <img class="lightbox-img" src="" alt="Просмотр фотографии">
+    <button class="lightbox-nav lightbox-next" type="button" aria-label="Следующее фото">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+</dialog>
+
 <dialog class="post-modal login-modal" id="loginModal" aria-labelledby="loginModalTitle">
     <div class="post-modal-head">
         <h2 id="loginModalTitle">Вход</h2>
@@ -462,6 +473,48 @@ document.querySelectorAll('.timer[data-end]').forEach(function (el) {
     dialog.addEventListener('close', function () {
         bodyEl.innerHTML = '';
     });
+})();
+</script>
+<script>
+(function () {
+    var dlg = document.getElementById('lightbox');
+    if (!dlg || typeof HTMLDialogElement === 'undefined') return;
+    var img = dlg.querySelector('.lightbox-img');
+    var list = [];
+    var idx = 0;
+    function show(i) {
+        if (!list.length) return;
+        idx = (i + list.length) % list.length;
+        img.src = list[idx];
+    }
+    document.addEventListener('click', function (e) {
+        var gal = e.target.closest('.gallery[data-lightbox]');
+        if (!gal) return;
+        var main = gal.querySelector('.gallery-main');
+        var srcs = [];
+        gal.querySelectorAll('.gallery-thumb').forEach(function (t) {
+            var s = t.getAttribute('data-src') || (t.querySelector('img') ? t.querySelector('img').getAttribute('src') : null);
+            if (s) srcs.push(s);
+        });
+        if (!srcs.length && main) srcs.push(main.getAttribute('src'));
+        if (!srcs.length) return;
+        var i = 0;
+        var thumbBtn = e.target.closest('.gallery-thumb');
+        if (thumbBtn) {
+            i = Array.prototype.indexOf.call(gal.querySelectorAll('.gallery-thumb'), thumbBtn);
+        } else if (e.target === main) {
+            i = Math.max(0, srcs.indexOf(main.getAttribute('src')));
+        } else {
+            return;
+        }
+        list = srcs;
+        show(i);
+        dlg.showModal();
+    });
+    dlg.querySelector('.lightbox-close').addEventListener('click', function () { dlg.close(); });
+    dlg.querySelector('.lightbox-prev').addEventListener('click', function () { show(idx - 1); });
+    dlg.querySelector('.lightbox-next').addEventListener('click', function () { show(idx + 1); });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
 })();
 </script>
 <script>

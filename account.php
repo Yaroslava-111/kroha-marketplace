@@ -126,6 +126,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?')->execute([$meId]);
         header('Location: account.php?tab=notifications&ok=readall');
         exit;
+    } elseif ($tab === 'notifications' && $action === 'read') {
+        $nid = (int) ($_POST['id'] ?? 0);
+        if ($nid > 0) {
+            $pdo->prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?')->execute([$nid, $meId]);
+        }
+        http_response_code(204);
+        exit;
     }
 }
 
@@ -804,19 +811,56 @@ require __DIR__ . '/includes/header.php';
                 <?php else: ?>
                     <section class="notice-list">
                         <?php foreach ($notifications as $n): ?>
-                            <div class="notice<?= (int) $n['is_read'] === 0 ? ' is-unread' : '' ?>">
-                                <?php if ((int) $n['is_read'] === 0): ?>
-                                    <span class="notice-dot" aria-label="Новое"></span>
-                                <?php endif; ?>
-                                <span class="chip notice-type"><?= e(notification_type_label($n['type'])) ?></span>
-                                <span class="notice-text"><?= e($n['text']) ?></span>
-                                <?php if ($n['link'] !== ''): ?>
-                                    <a class="notice-link" href="<?= e($n['link']) ?>">Открыть лот →</a>
-                                <?php endif; ?>
-                                <span class="muted small"><?= e(date('d.m.Y H:i', strtotime($n['created_at']))) ?></span>
-                            </div>
+                            <?php $isLink = $n['link'] !== ''; ?>
+                            <<?= $isLink ? 'a href="' . e($n['link']) . '"' : 'div' ?> class="notice<?= (int) $n['is_read'] === 0 ? ' is-unread' : '' ?>" data-nid="<?= (int) $n['id'] ?>">
+                                <span class="notice-icon notice-icon--<?= e($n['type']) ?>"><?= notification_icon($n['type']) ?></span>
+                                <span class="notice-body">
+                                    <span class="notice-text"><?= e($n['text']) ?></span>
+                                    <span class="notice-meta">
+                                        <span class="chip notice-type"><?= e(notification_type_label($n['type'])) ?></span>
+                                        <span class="muted small" title="<?= e(date('d.m.Y H:i', strtotime($n['created_at']))) ?>"><?= e(msg_time($n['created_at'])) ?></span>
+                                    </span>
+                                </span>
+                                <?php if ($isLink): ?><span class="notice-arrow" aria-hidden="true">→</span><?php endif; ?>
+                            </<?= $isLink ? 'a' : 'div' ?>>
                         <?php endforeach; ?>
                     </section>
+                    <script>
+                    (function () {
+                        var csrf = '<?= e(csrf_token()) ?>';
+                        function bumpBadges(delta) {
+                            ['.notif-badge', '.nav-badge-notif'].forEach(function (sel) {
+                                var b = document.querySelector(sel);
+                                if (!b) return;
+                                var n = Math.max(0, (parseInt(b.dataset.count, 10) || 0) + delta);
+                                b.dataset.count = String(n);
+                                b.textContent = n;
+                                b.classList.toggle('is-empty', n === 0);
+                            });
+                            var h2 = document.querySelector('.section-head h2 .muted');
+                            if (h2 && delta !== 0) {
+                                var m = h2.textContent.match(/\d+/);
+                                if (m) {
+                                    var left = Math.max(0, parseInt(m[0], 10) + delta);
+                                    h2.textContent = '(' + left + ' ' + (left === 1 ? 'непрочитанное' : 'непрочитанных') + ')';
+                                }
+                            }
+                        }
+                        document.querySelectorAll('.notice.is-unread[data-nid]').forEach(function (el) {
+                            el.addEventListener('click', function () {
+                                el.classList.remove('is-unread');
+                                bumpBadges(-1);
+                                var fd = new FormData();
+                                fd.append('csrf', csrf);
+                                fd.append('action', 'read');
+                                fd.append('id', el.getAttribute('data-nid'));
+                                fetch('account.php?tab=notifications', {
+                                    method: 'POST', credentials: 'same-origin', keepalive: true, body: fd
+                                }).catch(function () {});
+                            });
+                        });
+                    })();
+                    </script>
                 <?php endif; ?>
 
             <?php elseif ($tab === 'settings'): ?>

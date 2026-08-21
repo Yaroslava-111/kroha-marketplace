@@ -5,6 +5,15 @@ if (!isset($active)) {
     $active = '';
 }
 $pageTitle = isset($pageTitle) ? $pageTitle : (APP_NAME . ' — ' . APP_TAGLINE);
+$metaDesc = isset($metaDesc) ? $metaDesc : 'Кроха — маркетплейс детских вещей: объявления по фикс-цене, «отдам даром» и аукционы с автоставками. Коляски, одежда, игрушки по возрасту и размеру.';
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = preg_replace('/[^a-z0-9.\-:\[\]]/i', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
+$metaBase = $scheme . '://' . $host;
+$metaUrl = $metaBase . ($_SERVER['REQUEST_URI'] ?? '/');
+$metaImg = isset($metaImg) ? $metaImg : 'assets/favicon.svg';
+if (!str_starts_with($metaImg, 'http')) {
+    $metaImg = $metaBase . '/' . ltrim($metaImg, '/');
+}
 
 $currentUser = current_user();
 $unread = $currentUser ? unread_notifications_count($pdo, (int) $currentUser['id']) : 0;
@@ -16,6 +25,14 @@ $unreadMsgs = $currentUser ? unread_messages_count($pdo, (int) $currentUser['id'
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($pageTitle) ?></title>
+    <meta name="description" content="<?= e($metaDesc) ?>">
+    <meta property="og:site_name" content="<?= e(APP_NAME) ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<?= e($pageTitle) ?>">
+    <meta property="og:description" content="<?= e($metaDesc) ?>">
+    <meta property="og:image" content="<?= e($metaImg) ?>">
+    <meta property="og:url" content="<?= e($metaUrl) ?>">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

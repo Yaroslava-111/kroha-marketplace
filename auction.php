@@ -217,6 +217,8 @@ if ($currentUser) {
 
 $active = 'auctions';
 $pageTitle = $auction['title'] . ' — аукцион · ' . APP_NAME;
+$metaDesc = mb_strimwidth('Аукцион: текущая цена ' . money((int) $auction['current_price']) . '. Завершение ' . date('d.m.Y H:i', strtotime($auction['end_at'])) . '. ' . $auction['title'], 0, 160, '…');
+$metaImg = first_photo($auction);
 require __DIR__ . '/includes/header.php';
 ?>
     <?php if (($ok = $_GET['ok'] ?? '') !== ''): ?>
@@ -249,13 +251,13 @@ require __DIR__ . '/includes/header.php';
     </nav>
 
     <section class="item-layout">
-        <div class="gallery">
+        <div class="gallery" data-lightbox>
             <img class="gallery-main" src="<?= e(first_photo($auction)) ?>" alt="<?= e($auction['title']) ?>">
             <?php if (count($photos) > 1): ?>
                 <div class="gallery-thumbs">
                     <?php foreach ($photos as $i => $ph): ?>
                         <button type="button" class="gallery-thumb<?= $i === 0 ? ' is-active' : '' ?>" data-src="<?= e($ph) ?>">
-                            <img src="<?= e($ph) ?>" alt="">
+                            <img src="<?= e(thumb_of($ph)) ?>" alt="">
                         </button>
                     <?php endforeach; ?>
                 </div>

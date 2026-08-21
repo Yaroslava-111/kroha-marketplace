@@ -80,6 +80,8 @@ $isGive = (int) $item['is_giveaway'] === 1;
 
 $active = 'items';
 $pageTitle = $item['title'] . ' — ' . APP_NAME;
+$metaDesc = mb_strimwidth(($isGive ? 'Отдам даром' : money((int) $item['price']) . '. ') . ($item['condition_label'] ?: 'б/у') . '. ' . $item['city'] . '. ' . $item['title'], 0, 160, '…');
+$metaImg = first_photo($item);
 require __DIR__ . '/includes/header.php';
 ?>
     <?php if (($ok = $_GET['ok'] ?? '') === 'review'): ?>
@@ -106,14 +108,14 @@ require __DIR__ . '/includes/header.php';
         <span class="bc-current"><?= e(mb_strimwidth($item['title'], 0, 48, '…')) ?></span>
     </nav>
     <section class="item-layout">
-        <div class="gallery">
+        <div class="gallery" data-lightbox>
             <?php if ($photos): ?>
                 <img id="galleryMain" class="gallery-main" src="<?= e($photos[0]) ?>" alt="<?= e($item['title']) ?>">
                 <?php if (count($photos) > 1): ?>
                     <div class="gallery-thumbs">
                         <?php foreach ($photos as $i => $ph): ?>
                             <button type="button" class="gallery-thumb<?= $i === 0 ? ' is-active' : '' ?>" data-src="<?= e($ph) ?>" aria-label="Фото <?= $i + 1 ?>">
-                                <img src="<?= e($ph) ?>" alt="">
+                                <img src="<?= e(thumb_of($ph)) ?>" alt="">
                             </button>
                         <?php endforeach; ?>
                     </div>

@@ -45,7 +45,7 @@ $f = [
     'used' => ($_GET['used'] ?? '') === '1',
 ];
 
-function where_for(array $f, string $priceCol): array
+function where_for(array $f, string $priceCol, ?string $cityExpr = null): array
 {
     $p = [];
     $w = [];
@@ -81,6 +81,10 @@ function where_for(array $f, string $priceCol): array
         $w[] = $priceCol . ' <= ?';
         $p[] = (int) $f['price_max'];
     }
+    if ($f['city'] !== '' && $cityExpr !== null) {
+        $w[] = $cityExpr . ' LIKE ?';
+        $p[] = '%' . $f['city'] . '%';
+    }
     return [$w ? ' WHERE ' . implode(' AND ', $w) : '', $p];
 }
 
@@ -90,20 +94,23 @@ function filter_chip_url(array $get, string $drop): string
     return 'index.php?' . http_build_query($get);
 }
 
-function filter_city(array $rows, string $city, string $col): array
-{
-    if ($city === '') {
-        return $rows;
-    }
-    $cityLc = mb_strtolower($city);
-    return array_values(array_filter($rows, static fn(array $r) => mb_stripos((string) ($r[$col] ?? ''), $cityLc) !== false));
-}
-
 function catalog_url(string $type): string
 {
     $g = $_GET;
     $g['type'] = $type;
     return 'index.php?' . http_build_query($g);
+}
+
+function page_url(int $p): string
+{
+    $g = $_GET;
+    if ($p <= 1) {
+        unset($g['page']);
+    } else {
+        $g['page'] = $p;
+    }
+    $qs = http_build_query($g);
+    return 'index.php' . ($qs !== '' ? '?' . $qs : '');
 }
 
 $pdo = pdo();
@@ -122,32 +129,43 @@ $aucOrder = [
 ][$sort];
 
 $limit = $mode === 'home' ? 4 : 20;
+$perPage = 20;
+$page = max(1, (int) ($_GET['page'] ?? 1));
+$offset = ($page - 1) * $perPage;
 
-[$whereItems, $paramsItems] = where_for($f, 'i.price');
+[$whereItems, $paramsItems] = where_for($f, 'i.price', 'i.city');
 $extraItems = [];
 if ($f['used']) {
     $extraItems[] = 'i.is_giveaway = 0';
 }
 $extraItems[] = "i.status = 'active'";
 $whereItems .= $whereItems === '' ? ' WHERE ' . implode(' AND ', $extraItems) : ' AND ' . implode(' AND ', $extraItems);
-$items = $pdo->prepare('SELECT i.* FROM items i' . $whereItems . ' ORDER BY ' . $itemOrder . ' LIMIT ' . $limit);
+$countStmt = $pdo->prepare('SELECT COUNT(*) FROM items i' . $whereItems);
+$countStmt->execute($paramsItems);
+$totalItems = (int) $countStmt->fetchColumn();
+$items = $pdo->prepare('SELECT i.* FROM items i' . $whereItems . ' ORDER BY ' . $itemOrder . ' LIMIT ' . $limit . ' OFFSET ' . $offset);
 $items->execute($paramsItems);
 $items = $items->fetchAll();
-$items = filter_city($items, $f['city'], 'city');
 
-[$whereAuctions, $paramsAuctions] = where_for($f, 'a.current_price');
+[$whereAuctions, $paramsAuctions] = where_for($f, 'a.current_price', 'u.city');
 $statusClause = $whereAuctions === '' ? ' WHERE a.status = \'active\'' : $whereAuctions . ' AND a.status = \'active\'';
+$countStmt = $pdo->prepare(
+    'SELECT COUNT(*) FROM (SELECT a.id FROM auctions a JOIN users u ON u.id = a.user_id LEFT JOIN bids b ON b.auction_id = a.id'
+    . $statusClause
+    . ' GROUP BY a.id) t'
+);
+$countStmt->execute($paramsAuctions);
+$totalAuctions = (int) $countStmt->fetchColumn();
 $auctions = $pdo->prepare(
     'SELECT a.*, u.name AS seller_name, u.city AS seller_city, COUNT(b.id) AS bid_count
      FROM auctions a
      JOIN users u ON u.id = a.user_id
      LEFT JOIN bids b ON b.auction_id = a.id'
     . $statusClause
-    . ' GROUP BY a.id ORDER BY ' . $aucOrder . ' LIMIT ' . $limit
+    . ' GROUP BY a.id ORDER BY ' . $aucOrder . ' LIMIT ' . $limit . ' OFFSET ' . $offset
 );
 $auctions->execute($paramsAuctions);
 $auctions = $auctions->fetchAll();
-$auctions = filter_city($auctions, $f['city'], 'seller_city');
 
 $cats = categories();
 $seasons = ['всесезон', 'зима', 'весна', 'лето', 'осень'];
@@ -162,7 +180,7 @@ if ($f['used']) {
     $filterCount++;
 }
 $panelOpen = $filterCount > 0;
-$found = $mode === 'items' ? count($items) : ($mode === 'auctions' ? count($auctions) : count($items) + count($auctions));
+$found = $mode === 'items' ? $totalItems : ($mode === 'auctions' ? $totalAuctions : $totalItems + $totalAuctions);
 
 $showPills = $mode !== 'home';
 $showItems = in_array($mode, ['home', 'catalog', 'items'], true);
@@ -176,6 +194,13 @@ $pageTitles = [
     'auctions' => 'Аукционы — ' . APP_NAME,
 ];
 $pageTitle = $pageTitles[$mode];
+$metaDescs = [
+    'home' => 'Кроха — маркетплейс детских вещей: купите и продайте коляски, одежду и игрушки по фикс-цене или на аукционе.',
+    'catalog' => 'Каталог детских товаров: все объявления и аукционы с фильтрами по возрасту, размеру, сезону и городу.',
+    'items' => 'Объявления о продаже детских вещей по фикс-цене: коляски, одежда, игрушки, мебель. Есть «отдам даром».',
+    'auctions' => 'Аукционы детских вещей: ставки, автоставки до лимита и «купить сейчас». Цену определяет рынок.',
+];
+$metaDesc = $metaDescs[$mode];
 require __DIR__ . '/includes/header.php';
 ?>
 <?php if ($mode === 'home'): ?>
@@ -354,7 +379,7 @@ require __DIR__ . '/includes/header.php';
 <?php if ($showItems): ?>
     <section class="catalog-block">
         <div class="section-head">
-            <h2><?= $mode === 'home' ? 'Последние объявления' : 'Объявления' ?> <?php if ($mode !== 'home'): ?><span class="muted">(<?= count($items) ?>)</span><?php endif; ?></h2>
+            <h2><?= $mode === 'home' ? 'Последние объявления' : 'Объявления' ?> <?php if ($mode !== 'home'): ?><span class="muted">(<?= $totalItems ?>)</span><?php endif; ?></h2>
             <?php if ($mode === 'home'): ?>
                 <a class="view-all" href="index.php?type=items">Все объявления<svg class="view-all-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
             <?php else: ?>
@@ -370,13 +395,27 @@ require __DIR__ . '/includes/header.php';
         <?php else: ?>
             <p class="empty">Объявлений пока нет. <?= $mode === 'home' ? 'Станьте первым — разместите своё.' : 'Попробуйте снять фильтры.' ?></p>
         <?php endif; ?>
+        <?php if ($showItems && $mode !== 'home' && $totalItems > $perPage): ?>
+            <nav class="pagination" aria-label="Страницы объявлений">
+                <?php $pagesItems = (int) ceil($totalItems / $perPage); ?>
+                <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php endif; ?>
+                <?php for ($p = 1; $p <= $pagesItems; $p++): ?>
+                    <?php if ($pagesItems > 7 && $p > 2 && $p < $pagesItems - 1 && abs($p - $page) > 1): ?>
+                        <?php if (($p === 3 && $page > 4) || ($p === $pagesItems - 2 && $page < $pagesItems - 3)): ?><span class="page-dots">…</span><?php endif; ?>
+                        <?php continue; ?>
+                    <?php endif; ?>
+                    <a class="page-btn<?= $p === $page ? ' is-active' : '' ?>" href="<?= e(page_url($p)) ?>"><?= $p ?></a>
+                <?php endfor; ?>
+                <?php if ($page < $pagesItems): ?><a class="page-btn" href="<?= e(page_url($page + 1)) ?>">Вперёд →</a><?php endif; ?>
+            </nav>
+        <?php endif; ?>
     </section>
 <?php endif; ?>
 
 <?php if ($showAuctions): ?>
     <section class="catalog-block">
         <div class="section-head">
-            <h2><?= $mode === 'home' ? 'Свежие аукционы' : 'Аукционы' ?> <?php if ($mode !== 'home'): ?><span class="muted">(<?= count($auctions) ?>)</span><?php endif; ?></h2>
+            <h2><?= $mode === 'home' ? 'Свежие аукционы' : 'Аукционы' ?> <?php if ($mode !== 'home'): ?><span class="muted">(<?= $totalAuctions ?>)</span><?php endif; ?></h2>
             <?php if ($mode === 'home'): ?>
                 <a class="view-all" href="index.php?type=auctions">Все аукционы<svg class="view-all-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
             <?php else: ?>
@@ -391,6 +430,20 @@ require __DIR__ . '/includes/header.php';
             </div>
         <?php else: ?>
             <p class="empty">Аукционов пока нет. <?= $mode === 'home' ? 'Загляните позже.' : 'Попробуйте снять фильтры.' ?></p>
+        <?php endif; ?>
+        <?php if ($showAuctions && $mode !== 'home' && $totalAuctions > $perPage): ?>
+            <nav class="pagination" aria-label="Страницы аукционов">
+                <?php $pagesAuctions = (int) ceil($totalAuctions / $perPage); ?>
+                <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php endif; ?>
+                <?php for ($p = 1; $p <= $pagesAuctions; $p++): ?>
+                    <?php if ($pagesAuctions > 7 && $p > 2 && $p < $pagesAuctions - 1 && abs($p - $page) > 1): ?>
+                        <?php if (($p === 3 && $page > 4) || ($p === $pagesAuctions - 2 && $page < $pagesAuctions - 3)): ?><span class="page-dots">…</span><?php endif; ?>
+                        <?php continue; ?>
+                    <?php endif; ?>
+                    <a class="page-btn<?= $p === $page ? ' is-active' : '' ?>" href="<?= e(page_url($p)) ?>"><?= $p ?></a>
+                <?php endfor; ?>
+                <?php if ($page < $pagesAuctions): ?><a class="page-btn" href="<?= e(page_url($page + 1)) ?>">Вперёд →</a><?php endif; ?>
+            </nav>
         <?php endif; ?>
     </section>
 <?php endif; ?>
