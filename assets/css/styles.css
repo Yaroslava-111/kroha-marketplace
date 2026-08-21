@@ -1351,6 +1351,20 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
 .chat-expand, .chat-arch-form .icon-btn { flex: none; }
 .chat-arch-form { margin-left: 0; flex: none; }
 
+/* Панель владельца на странице объявления */
+.owner-panel {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 2px dashed var(--line);
+    border-radius: 12px;
+}
+.owner-note { font-size: 13px; font-weight: 800; color: var(--ink-soft); margin-right: auto; }
+
 .chat-thread {
     flex: 1; min-height: 0; overflow-y: auto;
     display: flex; flex-direction: column; gap: 10px;

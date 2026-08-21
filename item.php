@@ -220,6 +220,26 @@ require __DIR__ . '/includes/header.php';
                 </div>
             </div>
 
+            <?php if ($isOwner): ?>
+                <div class="owner-panel">
+                    <span class="owner-note">Это ваше объявление</span>
+                    <a class="btn btn-secondary btn-sm" href="edit_item.php?id=<?= $id ?>">Редактировать</a>
+                    <?php if ($item['status'] === 'active'): ?>
+                        <form method="post" action="account.php?tab=items">
+                            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="item_id" value="<?= $id ?>">
+                            <button class="btn-ghost btn-sm" type="submit" name="action" value="archive">Снять с публикации</button>
+                        </form>
+                    <?php else: ?>
+                        <form method="post" action="account.php?tab=items">
+                            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                            <input type="hidden" name="item_id" value="<?= $id ?>">
+                            <button class="btn-ghost btn-sm" type="submit" name="action" value="activate">Вернуть в продажу</button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
             <?php if ($isBuyer && $item['status'] === 'sold'): ?>
                 <div class="deal-box">
                     <?php if ($item['confirmed_at'] !== null && $item['confirmed_at'] !== ''): ?>
