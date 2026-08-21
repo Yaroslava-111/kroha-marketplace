@@ -765,20 +765,29 @@ require __DIR__ . '/includes/header.php';
                 <?php if (!$savedSearches): ?>
                     <p class="empty">Пока нет сохранённых поисков. Задайте фильтры в каталоге и нажмите «☆ Сохранить поиск» — мы сообщим о новых подходящих лотах.</p>
                 <?php else: ?>
-                    <section class="notice-list">
+                    <section class="ss-list">
                         <?php foreach ($savedSearches as $ss): ?>
-                            <article class="manage-row">
-                                <span class="notice-icon notice-icon--search" aria-hidden="true"><?= notification_icon('search') ?></span>
-                                <div class="manage-info">
+                            <article class="ss-card">
+                                <span class="ss-icon" aria-hidden="true"><?= notification_icon('search') ?></span>
+                                <div class="ss-body">
                                     <h3><a href="index.php?<?= e((string) $ss['params']) ?>"><?= e($ss['label']) ?></a></h3>
-                                    <p class="seller-sub">сохранён <?= e(date('d.m.Y', strtotime($ss['created_at']))) ?></p>
+                                    <?php $__chips = saved_search_chips((string) $ss['params']); ?>
+                                    <?php if ($__chips): ?>
+                                        <div class="ss-chips">
+                                            <?php foreach ($__chips as $__chip): ?><span class="chip"><?= e($__chip) ?></span><?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <p class="ss-meta">сохранён <?= e(date('d.m.Y', strtotime($ss['created_at']))) ?> · уведомим о новых лотах</p>
                                 </div>
-                                <form method="post" action="saved_search.php" onsubmit="return confirm('Удалить этот поиск?');">
-                                    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-                                    <input type="hidden" name="action" value="delete">
-                                    <input type="hidden" name="id" value="<?= (int) $ss['id'] ?>">
-                                    <button class="btn-ghost" type="submit">Удалить</button>
-                                </form>
+                                <div class="ss-actions">
+                                    <a class="btn btn-secondary btn-sm" href="index.php?<?= e((string) $ss['params']) ?>">Открыть</a>
+                                    <form method="post" action="saved_search.php" onsubmit="return confirm('Удалить этот поиск?');">
+                                        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="<?= (int) $ss['id'] ?>">
+                                        <button class="btn-ghost btn-sm ss-delete" type="submit">Удалить</button>
+                                    </form>
+                                </div>
                             </article>
                         <?php endforeach; ?>
                     </section>

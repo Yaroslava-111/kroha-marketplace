@@ -1155,6 +1155,46 @@ function describe_search(array $f): string
     return $parts !== [] ? implode(' · ', $parts) : 'Все лоты';
 }
 
+function saved_search_chips(string $params): array
+{
+    parse_str($params, $f);
+    $chips = [];
+    $q = trim((string) ($f['q'] ?? ''));
+    if ($q !== '') {
+        $chips[] = '«' . mb_strimwidth($q, 0, 24, '…') . '»';
+    }
+    foreach (['category', 'season', 'city'] as $key) {
+        if (($f[$key] ?? '') !== '') {
+            $chips[] = (string) $f[$key];
+        }
+    }
+    if (($f['size'] ?? '') !== '') {
+        $chips[] = 'размер ' . $f['size'];
+    }
+    $ageMin = (string) ($f['age_min'] ?? '');
+    $ageMax = (string) ($f['age_max'] ?? '');
+    if ($ageMin !== '' && $ageMax !== '') {
+        $chips[] = $ageMin . '–' . $ageMax . ' лет';
+    } elseif ($ageMin !== '') {
+        $chips[] = $ageMin . '+ лет';
+    } elseif ($ageMax !== '') {
+        $chips[] = 'до ' . $ageMax . ' лет';
+    }
+    $priceMin = (string) ($f['price_min'] ?? '');
+    $priceMax = (string) ($f['price_max'] ?? '');
+    if ($priceMin !== '' && $priceMax !== '') {
+        $chips[] = money((int) $priceMin) . ' – ' . money((int) $priceMax);
+    } elseif ($priceMin !== '') {
+        $chips[] = 'от ' . money((int) $priceMin);
+    } elseif ($priceMax !== '') {
+        $chips[] = 'до ' . money((int) $priceMax);
+    }
+    if (($f['used'] ?? '') === '1') {
+        $chips[] = 'только б/у';
+    }
+    return $chips;
+}
+
 function normalize_saved_search_params(array $get): string
 {
     $clean = [];
