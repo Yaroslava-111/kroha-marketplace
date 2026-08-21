@@ -395,10 +395,10 @@ require __DIR__ . '/includes/header.php';
         <?php else: ?>
             <p class="empty">Объявлений пока нет. <?= $mode === 'home' ? 'Станьте первым — разместите своё.' : 'Попробуйте снять фильтры.' ?></p>
         <?php endif; ?>
-        <?php if ($showItems && $mode !== 'home' && $totalItems > $perPage): ?>
+        <?php if ($showItems && $mode !== 'home' && $totalItems > 0): ?>
+            <?php $pagesItems = max(1, (int) ceil($totalItems / $perPage)); ?>
             <nav class="pagination" aria-label="Страницы объявлений">
-                <?php $pagesItems = (int) ceil($totalItems / $perPage); ?>
-                <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php endif; ?>
+                <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php else: ?><span class="page-btn is-disabled">← Назад</span><?php endif; ?>
                 <?php for ($p = 1; $p <= $pagesItems; $p++): ?>
                     <?php if ($pagesItems > 7 && $p > 2 && $p < $pagesItems - 1 && abs($p - $page) > 1): ?>
                         <?php if (($p === 3 && $page > 4) || ($p === $pagesItems - 2 && $page < $pagesItems - 3)): ?><span class="page-dots">…</span><?php endif; ?>
@@ -406,7 +406,7 @@ require __DIR__ . '/includes/header.php';
                     <?php endif; ?>
                     <a class="page-btn<?= $p === $page ? ' is-active' : '' ?>" href="<?= e(page_url($p)) ?>"><?= $p ?></a>
                 <?php endfor; ?>
-                <?php if ($page < $pagesItems): ?><a class="page-btn" href="<?= e(page_url($page + 1)) ?>">Вперёд →</a><?php endif; ?>
+                <?php if ($page < $pagesItems): ?><a class="page-btn" href="<?= e(page_url($page + 1)) ?>">Вперёд →</a><?php else: ?><span class="page-btn is-disabled">Вперёд →</span><?php endif; ?>
             </nav>
         <?php endif; ?>
     </section>
@@ -431,10 +431,10 @@ require __DIR__ . '/includes/header.php';
         <?php else: ?>
             <p class="empty">Аукционов пока нет. <?= $mode === 'home' ? 'Загляните позже.' : 'Попробуйте снять фильтры.' ?></p>
         <?php endif; ?>
-        <?php if ($showAuctions && $mode !== 'home' && $totalAuctions > $perPage): ?>
+        <?php if ($showAuctions && $mode !== 'home' && $totalAuctions > 0): ?>
+            <?php $pagesAuctions = max(1, (int) ceil($totalAuctions / $perPage)); ?>
             <nav class="pagination" aria-label="Страницы аукционов">
-                <?php $pagesAuctions = (int) ceil($totalAuctions / $perPage); ?>
-                <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php endif; ?>
+                <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php else: ?><span class="page-btn is-disabled">← Назад</span><?php endif; ?>
                 <?php for ($p = 1; $p <= $pagesAuctions; $p++): ?>
                     <?php if ($pagesAuctions > 7 && $p > 2 && $p < $pagesAuctions - 1 && abs($p - $page) > 1): ?>
                         <?php if (($p === 3 && $page > 4) || ($p === $pagesAuctions - 2 && $page < $pagesAuctions - 3)): ?><span class="page-dots">…</span><?php endif; ?>
@@ -442,7 +442,7 @@ require __DIR__ . '/includes/header.php';
                     <?php endif; ?>
                     <a class="page-btn<?= $p === $page ? ' is-active' : '' ?>" href="<?= e(page_url($p)) ?>"><?= $p ?></a>
                 <?php endfor; ?>
-                <?php if ($page < $pagesAuctions): ?><a class="page-btn" href="<?= e(page_url($page + 1)) ?>">Вперёд →</a><?php endif; ?>
+                <?php if ($page < $pagesAuctions): ?><a class="page-btn" href="<?= e(page_url($page + 1)) ?>">Вперёд →</a><?php else: ?><span class="page-btn is-disabled">Вперёд →</span><?php endif; ?>
             </nav>
         <?php endif; ?>
     </section>

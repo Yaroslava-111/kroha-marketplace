@@ -847,7 +847,10 @@ require __DIR__ . '/includes/header.php';
                             }
                         }
                         document.querySelectorAll('.notice.is-unread[data-nid]').forEach(function (el) {
-                            el.addEventListener('click', function () {
+                            el.addEventListener('click', function (ev) {
+                                var href = el.getAttribute('href');
+                                if (ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || (ev.button !== undefined && ev.button !== 0)) return;
+                                ev.preventDefault();
                                 el.classList.remove('is-unread');
                                 bumpBadges(-1);
                                 var fd = new FormData();
@@ -855,8 +858,10 @@ require __DIR__ . '/includes/header.php';
                                 fd.append('action', 'read');
                                 fd.append('id', el.getAttribute('data-nid'));
                                 fetch('account.php?tab=notifications', {
-                                    method: 'POST', credentials: 'same-origin', keepalive: true, body: fd
-                                }).catch(function () {});
+                                    method: 'POST', credentials: 'same-origin', body: fd
+                                }).catch(function () {}).then(function () {
+                                    if (href) window.location.href = href;
+                                });
                             });
                         });
                     })();

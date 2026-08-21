@@ -323,6 +323,7 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
 }
 .page-btn:hover { border-color: var(--accent); }
 .page-btn.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.page-btn.is-disabled { opacity: .45; pointer-events: none; }
 .page-dots { color: var(--ink-soft); font-weight: 700; padding: 0 2px; }
 
 /* Buttons */

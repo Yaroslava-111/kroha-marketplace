@@ -491,24 +491,16 @@ document.querySelectorAll('.timer[data-end]').forEach(function (el) {
         var gal = e.target.closest('.gallery[data-lightbox]');
         if (!gal) return;
         var main = gal.querySelector('.gallery-main');
+        if (!main || e.target !== main) return;
         var srcs = [];
         gal.querySelectorAll('.gallery-thumb').forEach(function (t) {
-            var s = t.getAttribute('data-src') || (t.querySelector('img') ? t.querySelector('img').getAttribute('src') : null);
+            var s = t.getAttribute('data-src');
             if (s) srcs.push(s);
         });
-        if (!srcs.length && main) srcs.push(main.getAttribute('src'));
+        if (!srcs.length && main.getAttribute('src')) srcs.push(main.getAttribute('src'));
         if (!srcs.length) return;
-        var i = 0;
-        var thumbBtn = e.target.closest('.gallery-thumb');
-        if (thumbBtn) {
-            i = Array.prototype.indexOf.call(gal.querySelectorAll('.gallery-thumb'), thumbBtn);
-        } else if (e.target === main) {
-            i = Math.max(0, srcs.indexOf(main.getAttribute('src')));
-        } else {
-            return;
-        }
         list = srcs;
-        show(i);
+        show(Math.max(0, srcs.indexOf(main.getAttribute('src'))));
         dlg.showModal();
     });
     dlg.querySelector('.lightbox-close').addEventListener('click', function () { dlg.close(); });
