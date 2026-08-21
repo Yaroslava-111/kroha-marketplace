@@ -233,6 +233,65 @@ assert_eq(password_reset_by_token($pdo, 'expired-token'), null, 'просроч�
 assert_eq(complete_password_reset($pdo, 'expired-token', 'xoroshiy-parol'), false, 'просроченный токен не срабатывает');
 
 // ------------------------------------------------------------------
+section('ЧПУ: слаги и ссылки');
+assert_eq(slugify('Коляска Yoyo 2'), 'kolyaska-yoyo-2', 'slugify транслитерирует');
+assert_eq(slugify('Комбинезон зимний'), 'kombinezon-zimniy', 'slugify обрабатывает ь/й');
+assert_eq(lot_url('item', 22, '222222'), '/item/22-222222', 'цифровой заголовок не ломает ссылку');
+assert_eq(parse_pretty_lot_path('/item/22-kolyaska-yoyo'), ['kind' => 'item', 'id' => 22], 'разбор ЧПУ объявления');
+assert_eq(parse_pretty_lot_path('/auction/7'), ['kind' => 'auction', 'id' => 7], 'ЧПУ аукциона без слага');
+check('чужие пути не парсятся', parse_pretty_lot_path('/item.php?id=22') === null && parse_pretty_lot_path('/items/22') === null);
+
+// ------------------------------------------------------------------
+section('Сохранённые поиски');
+assert_eq(describe_search([]), 'Все лоты', 'пустые фильтры');
+check('описание собирает фильтры', str_contains(describe_search(['q' => 'коляска', 'city' => 'Москва']), 'коляска'));
+assert_eq(normalize_saved_search_params(['q' => 'юла', 'page' => '2', 'sort' => 'newest']), 'q=' . urlencode('юла'), 'page/sort отбрасываются');
+check('цена: максимум отсеивает', !search_matches_lot(['price_max' => '10000'], ['price' => 12000]));
+check('цена: минимум пропускает', search_matches_lot(['price_min' => '10000'], ['price' => 12000]));
+check('поиск по тексту работает', search_matches_lot(['q' => 'коляска'], ['search_lc' => 'коляска yoyo, москва']));
+check('возраст пересекается', search_matches_lot(['age_min' => '1', 'age_max' => '3'], ['age_min' => 2, 'age_max' => 4]));
+check('возраст не пересекается', !search_matches_lot(['age_min' => '5'], ['age_min' => 2, 'age_max' => 4]));
+
+$__db = fresh_db();
+$__db->prepare("INSERT INTO saved_searches (user_id, params, label) VALUES (2, 'category=Коляски', 'Коляски')")->execute();
+$__db->prepare("INSERT INTO saved_searches (user_id, params, label) VALUES (3, 'category=Мебель', 'Мебель')")->execute();
+notify_saved_searches($__db, 'item', 1);
+assert_eq(
+    (int) $__db->query("SELECT COUNT(*) FROM notifications WHERE user_id = 2 AND type = 'search'")->fetchColumn(),
+    1,
+    'подходящий лот уведомляет подписчика'
+);
+assert_eq(
+    (int) $__db->query("SELECT COUNT(*) FROM notifications WHERE user_id = 3 AND type = 'search'")->fetchColumn(),
+    0,
+    'неподходящий поиск молчит'
+);
+$__db->prepare("INSERT INTO saved_searches (user_id, params, label) VALUES (3, 'category=Коляски', 'Коляски-3')")->execute();
+notify_saved_searches($__db, 'auction', 1);
+assert_eq(
+    (int) $__db->query("SELECT COUNT(*) FROM notifications WHERE user_id = 3 AND type = 'search'")->fetchColumn(),
+    1,
+    'новый аукцион тоже матчится с поиском'
+);
+check('saved_searches_of возвращает поиски пользователя', in_array('Мебель', array_column(saved_searches_of($__db, 3), 'label'), true));
+
+// ------------------------------------------------------------------
+section('Рейтинги продавцов');
+$__db2 = fresh_db();
+assert_eq(seller_ratings_map($__db2, [1]), [], 'без отзывов карта пуста');
+$__db2->prepare("INSERT INTO reviews (author_id, user_id, item_id, rating, text) VALUES (2, 1, 1, 5, 'Отлично')")->execute();
+$__map = seller_ratings_map($__db2, [1, 999]);
+assert_eq($__map[1]['avg'], 5.0, 'средний рейтинг');
+assert_eq($__map[1]['cnt'], 1, 'число отзывов');
+
+// ------------------------------------------------------------------
+section('Sitemap');
+$__locs = array_column(sitemap_entries($__db2), 'loc');
+check('главная в sitemap', in_array('/', $__locs, true));
+check('объявление с ЧПУ в sitemap', (bool) preg_grep('#^/item/1-kolyaska#', $__locs));
+check('аукцион с ЧПУ в sitemap', (bool) preg_grep('#^/auction/1-kolyaska-aukcion#', $__locs));
+
+// ------------------------------------------------------------------
 section('Смоук по HTTP (опционально)');
 $host = 'http://127.0.0.1:8091';
 $ctx = stream_context_create(['http' => ['timeout' => 2]]);
@@ -245,6 +304,10 @@ if ($page === false) {
     $poll = file_get_contents($host . '/notifications_poll.php', false, $ctx);
     $data = json_decode((string) $poll, true);
     assert_eq(($data['ok'] ?? null), false, 'poll без авторизации => ok=false');
+    $sm = @file_get_contents($host . '/sitemap.xml', false, $ctx);
+    check('sitemap.xml отдаётся', $sm !== false && str_contains((string) $sm, '<urlset'));
+    $rb = @file_get_contents($host . '/robots.txt', false, $ctx);
+    check('robots.txt отдаётся', $rb !== false && str_contains((string) $rb, 'Sitemap:'));
 }
 
 echo "\n----------------------------------------\n";

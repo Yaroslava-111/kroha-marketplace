@@ -168,6 +168,15 @@ $auctions = $pdo->prepare(
 $auctions->execute($paramsAuctions);
 $auctions = $auctions->fetchAll();
 
+$sellerIds = [];
+foreach ($items as $r) {
+    $sellerIds[] = (int) $r['user_id'];
+}
+foreach ($auctions as $r) {
+    $sellerIds[] = (int) $r['user_id'];
+}
+$sellerRatings = seller_ratings_map($pdo, $sellerIds);
+
 $feed = [];
 if ($mode === 'catalog') {
     foreach ($items as $it) {
@@ -266,6 +275,16 @@ require __DIR__ . '/includes/header.php';
     </section>
 <?php endif; ?>
 
+<?php if (isset($_GET['ss_ok'])): ?>
+    <div class="alert alert-ok">Поиск сохранён — уведомим, когда появятся новые лоты.</div>
+<?php elseif (($_GET['ss_err'] ?? '') === 'exists'): ?>
+    <div class="alert alert-error">Такой поиск уже сохранён — смотрите вкладку «Поиски» в кабинете.</div>
+<?php elseif (($_GET['ss_err'] ?? '') === 'limit'): ?>
+    <div class="alert alert-error">Можно сохранить не больше 20 поисков. Удалите лишние в кабинете.</div>
+<?php elseif (($_GET['ss_err'] ?? '') === 'empty'): ?>
+    <div class="alert alert-error">Сначала задайте условия поиска.</div>
+<?php endif; ?>
+
 <form class="filters" method="get" id="filtersForm">
     <input type="hidden" name="type" value="<?= e($typeParam) ?>">
     <?php if ($f['q'] !== ''): ?><input type="hidden" name="q" value="<?= e($f['q']) ?>"><?php endif; ?>
@@ -288,6 +307,17 @@ require __DIR__ . '/includes/header.php';
                 Фильтры<?php if ($filterCount): ?><span class="filter-count"><?= $filterCount ?></span><?php endif; ?>
             </button>
             <?php if ($filterCount): ?><a class="btn btn-secondary" href="index.php<?= $typeParam !== '' ? '?type=' . e($typeParam) : '' ?>">Сброс</a><?php endif; ?>
+            <?php if ($mode !== 'home'): ?>
+                <?php if ($currentUser): ?>
+                    <button class="btn btn-ghost save-search-btn" type="button" id="saveSearchBtn"
+                            data-csrf="<?= e(csrf_token()) ?>"
+                            data-params="<?= e(normalize_saved_search_params($_GET)) ?>"
+                            data-next="<?= e($_SERVER['REQUEST_URI'] ?? 'index.php?type=all') ?>"
+                            title="Сохранить фильтры и получать уведомления о новых лотах">☆ Сохранить поиск</button>
+                <?php else: ?>
+                    <a class="btn btn-ghost save-search-btn" href="login.php?next=<?= urlencode($_SERVER['REQUEST_URI'] ?? 'index.php?type=all') ?>" title="Войдите, чтобы сохранять поиски">☆ Сохранить поиск</a>
+                <?php endif; ?>
+            <?php endif; ?>
         </div>
     </div>
     <?php
@@ -398,6 +428,23 @@ require __DIR__ . '/includes/header.php';
     });
     if (sort) {
         sort.addEventListener('change', function () { form.submit(); });
+    }
+    var saveBtn = document.getElementById('saveSearchBtn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+            var post = document.createElement('form');
+            post.method = 'post';
+            post.action = 'saved_search.php';
+            [['csrf', saveBtn.getAttribute('data-csrf')], ['action', 'save'], ['params', saveBtn.getAttribute('data-params')], ['next', saveBtn.getAttribute('data-next')]].forEach(function (pair) {
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = pair[0];
+                hidden.value = pair[1] || '';
+                post.appendChild(hidden);
+            });
+            document.body.appendChild(post);
+            post.submit();
+        });
     }
 })();
 </script>

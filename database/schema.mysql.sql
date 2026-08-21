@@ -181,3 +181,13 @@ CREATE TABLE IF NOT EXISTS view_history (
     CONSTRAINT fk_history_item FOREIGN KEY (item_id) REFERENCES items(id),
     CONSTRAINT fk_history_auction FOREIGN KEY (auction_id) REFERENCES auctions(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id         INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    user_id    INT UNSIGNED NOT NULL,
+    params     VARCHAR(1000) NOT NULL,
+    label      VARCHAR(500) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY idx_saved_searches_user (user_id, params(255)),
+    CONSTRAINT fk_saved_search_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

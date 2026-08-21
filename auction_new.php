@@ -105,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $searchLc,
                 date('Y-m-d H:i:s'),
             ]);
+            notify_saved_searches($pdo, 'auction', (int) $pdo->lastInsertId());
             header('Location: auction.php?id=' . (int) $pdo->lastInsertId() . '&ok=create');
             exit;
         }

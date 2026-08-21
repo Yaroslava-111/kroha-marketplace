@@ -530,6 +530,7 @@ function notification_type_label(string $type): string
         'confirmed' => 'Сделка подтверждена',
         'report' => 'Новая жалоба',
         'report_answered' => 'Ответ на жалобу',
+        'search' => 'Сохранённый поиск',
         default => $type,
     };
 }
@@ -548,6 +549,7 @@ function notification_icon(string $type): string
         'confirmed' => $svg('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'),
         'report' => $svg('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
         'report_answered' => $svg('<polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>'),
+        'search' => $svg('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
         default => $svg('<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'),
     };
 }
@@ -1045,4 +1047,224 @@ function view_history(PDO $pdo, int $userId, int $limit = 10): array
 function clear_view_history(PDO $pdo, int $userId): void
 {
     $pdo->prepare('DELETE FROM view_history WHERE user_id = ?')->execute([$userId]);
+}
+
+function slugify(string $title): string
+{
+    $translit = [
+        'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd', 'е' => 'e', 'ё' => 'e',
+        'ж' => 'zh', 'з' => 'z', 'и' => 'i', 'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm',
+        'н' => 'n', 'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't', 'у' => 'u',
+        'ф' => 'f', 'х' => 'h', 'ц' => 'c', 'ч' => 'ch', 'ш' => 'sh', 'щ' => 'sch', 'ъ' => '',
+        'ы' => 'y', 'ь' => '', 'э' => 'e', 'ю' => 'yu', 'я' => 'ya',
+    ];
+    $t = strtr(mb_strtolower(trim($title)), $translit);
+    $t = preg_replace('/[^a-z0-9]+/', '-', $t) ?? '';
+    return trim($t, '-');
+}
+
+function lot_url(string $kind, int $id, string $title): string
+{
+    $base = $kind === 'item' ? 'item' : 'auction';
+    $slug = mb_substr(slugify($title), 0, 60);
+    return '/' . $base . '/' . $id . ($slug !== '' ? '-' . $slug : '');
+}
+
+function parse_pretty_lot_path(string $path): ?array
+{
+    if (!preg_match('#^/(item|auction)/(\d+)(?:-[^/]*)?$#', $path, $m)) {
+        return null;
+    }
+    return ['kind' => $m[1], 'id' => (int) $m[2]];
+}
+
+function maybe_redirect_pretty(string $kind, int $id, string $title): void
+{
+    if (($_GET['pretty'] ?? '') === '1') {
+        return;
+    }
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+        return;
+    }
+    if (basename((string) ($_SERVER['SCRIPT_NAME'] ?? '')) !== $kind . '.php') {
+        return;
+    }
+    $params = $_GET;
+    unset($params['id']);
+    $qs = http_build_query($params);
+    header('Location: ' . lot_url($kind, $id, $title) . ($qs !== '' ? '?' . $qs : ''), true, 301);
+    exit;
+}
+
+function seller_ratings_map(PDO $pdo, array $userIds): array
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $userIds), static fn(int $i): bool => $i > 0)));
+    if ($ids === []) {
+        return [];
+    }
+    $in = implode(',', array_fill(0, count($ids), '?'));
+    $stmt = $pdo->prepare(
+        "SELECT user_id, ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS cnt
+         FROM reviews WHERE user_id IN ($in) GROUP BY user_id"
+    );
+    $stmt->execute($ids);
+    $map = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $map[(int) $row['user_id']] = ['avg' => (float) $row['avg_rating'], 'cnt' => (int) $row['cnt']];
+    }
+    return $map;
+}
+
+function saved_search_filter_keys(): array
+{
+    return ['q', 'category', 'age_min', 'age_max', 'size', 'season', 'city', 'price_min', 'price_max', 'used'];
+}
+
+function describe_search(array $f): string
+{
+    $parts = [];
+    $q = trim((string) ($f['q'] ?? ''));
+    if ($q !== '') {
+        $parts[] = '«' . $q . '»';
+    }
+    if (($f['category'] ?? '') !== '') {
+        $parts[] = (string) $f['category'];
+    }
+    if (($f['size'] ?? '') !== '') {
+        $parts[] = 'размер ' . $f['size'];
+    }
+    if (($f['season'] ?? '') !== '') {
+        $parts[] = (string) $f['season'];
+    }
+    if (($f['city'] ?? '') !== '') {
+        $parts[] = (string) $f['city'];
+    }
+    $ageMin = (string) ($f['age_min'] ?? '');
+    $ageMax = (string) ($f['age_max'] ?? '');
+    if ($ageMin !== '' || $ageMax !== '') {
+        $parts[] = 'возраст ' . ($ageMin !== '' ? $ageMin : '0') . '–' . ($ageMax !== '' ? $ageMax : '∞');
+    }
+    $priceMin = (string) ($f['price_min'] ?? '');
+    $priceMax = (string) ($f['price_max'] ?? '');
+    if ($priceMin !== '' || $priceMax !== '') {
+        $parts[] = 'цена ' . ($priceMin !== '' ? $priceMin : '0') . '–' . ($priceMax !== '' ? $priceMax : '∞') . ' ₽';
+    }
+    if (($f['used'] ?? '') === '1') {
+        $parts[] = 'только б/у';
+    }
+    return $parts !== [] ? implode(' · ', $parts) : 'Все лоты';
+}
+
+function normalize_saved_search_params(array $get): string
+{
+    $clean = [];
+    foreach (saved_search_filter_keys() as $key) {
+        $val = trim((string) ($get[$key] ?? ''));
+        if ($val !== '') {
+            $clean[$key] = $val;
+        }
+    }
+    ksort($clean);
+    return http_build_query($clean);
+}
+
+function search_matches_lot(array $f, array $lot): bool
+{
+    $q = trim((string) ($f['q'] ?? ''));
+    if ($q !== '' && !str_contains(mb_strtolower((string) ($lot['search_lc'] ?? '')), mb_strtolower($q))) {
+        return false;
+    }
+    if (($f['category'] ?? '') !== '' && (string) ($lot['category'] ?? '') !== (string) $f['category']) {
+        return false;
+    }
+    $ageMin = (string) ($f['age_min'] ?? '');
+    $ageMax = (string) ($f['age_max'] ?? '');
+    if ($ageMin !== '' && ($lot['age_max'] === null || (int) $lot['age_max'] < (int) $ageMin)) {
+        return false;
+    }
+    if ($ageMax !== '' && ($lot['age_min'] === null || (int) $lot['age_min'] > (int) $ageMax)) {
+        return false;
+    }
+    $size = trim((string) ($f['size'] ?? ''));
+    if ($size !== '' && !str_contains(mb_strtolower((string) ($lot['size'] ?? '')), mb_strtolower($size))) {
+        return false;
+    }
+    if (($f['season'] ?? '') !== '' && (string) ($lot['season'] ?? '') !== (string) $f['season']) {
+        return false;
+    }
+    $city = trim((string) ($f['city'] ?? ''));
+    if ($city !== '' && !str_contains(mb_strtolower((string) ($lot['city'] ?? '')), mb_strtolower($city))) {
+        return false;
+    }
+    $price = (int) ($lot['price'] ?? $lot['current_price'] ?? 0);
+    $priceMin = (string) ($f['price_min'] ?? '');
+    $priceMax = (string) ($f['price_max'] ?? '');
+    if ($priceMin !== '' && $price < (int) $priceMin) {
+        return false;
+    }
+    if ($priceMax !== '' && $price > (int) $priceMax) {
+        return false;
+    }
+    if (($f['used'] ?? '') === '1' && (int) ($lot['is_giveaway'] ?? 0) === 1) {
+        return false;
+    }
+    return true;
+}
+
+function notify_saved_searches(PDO $pdo, string $kind, int $lotId): void
+{
+    $table = $kind === 'item' ? 'items' : 'auctions';
+    $stmt = $pdo->prepare(
+        "SELECT l.*, u.city AS city FROM {$table} l JOIN users u ON u.id = l.user_id WHERE l.id = ?"
+    );
+    $stmt->execute([$lotId]);
+    $lot = $stmt->fetch();
+    if ($lot === false || (string) $lot['status'] !== 'active') {
+        return;
+    }
+    $rows = $pdo->query('SELECT id, user_id, params, label FROM saved_searches')->fetchAll();
+    foreach ($rows as $ss) {
+        if ((int) $ss['user_id'] === (int) $lot['user_id']) {
+            continue;
+        }
+        parse_str((string) $ss['params'], $f);
+        if (!search_matches_lot($f, $lot)) {
+            continue;
+        }
+        notify(
+            $pdo,
+            (int) $ss['user_id'],
+            'search',
+            'Новый лот по вашему поиску «' . $ss['label'] . '»: ' . $lot['title'],
+            lot_url($kind, (int) $lot['id'], (string) $lot['title'])
+        );
+    }
+}
+
+function saved_searches_of(PDO $pdo, int $userId): array
+{
+    $stmt = $pdo->prepare('SELECT * FROM saved_searches WHERE user_id = ? ORDER BY id DESC');
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll();
+}
+
+function sitemap_entries(PDO $pdo): array
+{
+    $entries = [
+        ['loc' => '/', 'lastmod' => date('Y-m-d')],
+        ['loc' => '/index.php?type=all', 'lastmod' => date('Y-m-d')],
+        ['loc' => '/index.php?type=items', 'lastmod' => date('Y-m-d')],
+        ['loc' => '/index.php?type=auctions', 'lastmod' => date('Y-m-d')],
+        ['loc' => '/help.php', 'lastmod' => '2026-01-01'],
+        ['loc' => '/policy.php', 'lastmod' => '2026-01-01'],
+    ];
+    $rows = $pdo->query("SELECT id, title, created_at FROM items WHERE status = 'active' ORDER BY id")->fetchAll();
+    foreach ($rows as $r) {
+        $entries[] = ['loc' => lot_url('item', (int) $r['id'], (string) $r['title']), 'lastmod' => substr((string) $r['created_at'], 0, 10)];
+    }
+    $rows = $pdo->query("SELECT id, title, created_at FROM auctions WHERE status = 'active' ORDER BY id")->fetchAll();
+    foreach ($rows as $r) {
+        $entries[] = ['loc' => lot_url('auction', (int) $r['id'], (string) $r['title']), 'lastmod' => substr((string) $r['created_at'], 0, 10)];
+    }
+    return $entries;
 }

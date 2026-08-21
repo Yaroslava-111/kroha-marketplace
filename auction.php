@@ -211,6 +211,8 @@ $photos = photos_of($auction);
 
 $favAuctions = [];
 $sellerRating = seller_rating($pdo, (int) $auction['user_id']);
+$canonicalUrl = APP_BASE_URL . lot_url('auction', (int) $auction['id'], (string) $auction['title']);
+maybe_redirect_pretty('auction', (int) $auction['id'], (string) $auction['title']);
 if ($currentUser) {
     [$favItems, $favAuctions] = favorite_state($pdo, (int) $currentUser['id']);
 }

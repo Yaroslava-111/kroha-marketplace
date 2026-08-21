@@ -13,6 +13,10 @@ define('APP_DEV', true);
 // Драйвер БД: 'sqlite' — локальная разработка, 'mysql' — хостинг
 define('DB_DRIVER', 'sqlite');
 
+// Публичный адрес сайта (для sitemap.xml, robots.txt и canonical-ссылок).
+// На боевом хостинге замените на реальный домен, например https://kroha.ru
+define('APP_BASE_URL', 'http://127.0.0.1:8091');
+
 // --- SQLite (локально) ---
 define('DB_PATH', __DIR__ . '/database/kroha.db');
 

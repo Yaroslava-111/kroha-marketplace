@@ -9,7 +9,7 @@ $pdo = pdo();
 $me = current_user();
 $meId = (int) $me['id'];
 
-$validTabs = ['overview', 'items', 'auctions', 'bids', 'reviews', 'favorites', 'messages', 'notifications', 'history', 'settings'];
+$validTabs = ['overview', 'items', 'auctions', 'bids', 'reviews', 'favorites', 'searches', 'messages', 'notifications', 'history', 'settings'];
 $tab = (string) ($_GET['tab'] ?? 'overview');
 if (!in_array($tab, $validTabs, true)) {
     $tab = 'overview';
@@ -251,6 +251,12 @@ if ($tab === 'favorites') {
 $history = [];
 if ($tab === 'history') {
     $history = view_history($pdo, $meId, 10);
+}
+
+// Сохранённые поиски
+$savedSearches = [];
+if ($tab === 'searches') {
+    $savedSearches = saved_searches_of($pdo, $meId);
 }
 
 // Отзывы
@@ -745,6 +751,37 @@ require __DIR__ . '/includes/header.php';
                         <p class="empty">В избранном пока нет аукционов. Нажмите на ♥ на карточке или странице лота.</p>
                     <?php endif; ?>
                 </section>
+                <?php endif; ?>
+
+            <?php elseif ($tab === 'searches'): ?>
+                <div class="section-head">
+                    <h2>Сохранённые поиски <span class="muted">(<?= count($savedSearches) ?>)</span></h2>
+                    <a class="btn btn-primary" href="index.php?type=all">Новый поиск</a>
+                </div>
+                <?php if (($_GET['ok'] ?? '') === 'deleted'): ?>
+                    <div class="alert alert-ok">Поиск удалён.</div>
+                <?php endif; ?>
+
+                <?php if (!$savedSearches): ?>
+                    <p class="empty">Пока нет сохранённых поисков. Задайте фильтры в каталоге и нажмите «☆ Сохранить поиск» — мы сообщим о новых подходящих лотах.</p>
+                <?php else: ?>
+                    <section class="notice-list">
+                        <?php foreach ($savedSearches as $ss): ?>
+                            <article class="manage-row">
+                                <span class="notice-icon notice-icon--search" aria-hidden="true"><?= notification_icon('search') ?></span>
+                                <div class="manage-info">
+                                    <h3><a href="index.php?<?= e((string) $ss['params']) ?>"><?= e($ss['label']) ?></a></h3>
+                                    <p class="seller-sub">сохранён <?= e(date('d.m.Y', strtotime($ss['created_at']))) ?></p>
+                                </div>
+                                <form method="post" action="saved_search.php" onsubmit="return confirm('Удалить этот поиск?');">
+                                    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= (int) $ss['id'] ?>">
+                                    <button class="btn-ghost" type="submit">Удалить</button>
+                                </form>
+                            </article>
+                        <?php endforeach; ?>
+                    </section>
                 <?php endif; ?>
 
             <?php elseif ($tab === 'history'): ?>

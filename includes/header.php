@@ -31,7 +31,8 @@ $unreadMsgs = $currentUser ? unread_messages_count($pdo, (int) $currentUser['id'
     <meta property="og:title" content="<?= e($pageTitle) ?>">
     <meta property="og:description" content="<?= e($metaDesc) ?>">
     <meta property="og:image" content="<?= e($metaImg) ?>">
-    <meta property="og:url" content="<?= e($metaUrl) ?>">
+    <meta property="og:url" content="<?= e($canonicalUrl ?? $metaUrl) ?>">
+    <link rel="canonical" href="<?= e($canonicalUrl ?? $metaUrl) ?>">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">

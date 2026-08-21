@@ -116,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $searchLc,
                 date('Y-m-d H:i:s'),
             ]);
+            notify_saved_searches($pdo, 'auction', (int) $pdo->lastInsertId());
             if ($isFragment) {
                 header('Content-Type: application/json; charset=utf-8');
                 echo json_encode(['ok' => true, 'url' => 'auction.php?id=' . (int) $pdo->lastInsertId() . '&ok=create']);

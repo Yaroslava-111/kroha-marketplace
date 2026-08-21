@@ -53,6 +53,8 @@ $auctionsStmt = $pdo->prepare(
 $auctionsStmt->execute([$id]);
 $profileAuctions = $auctionsStmt->fetchAll();
 
+$sellerRatings = seller_ratings_map($pdo, [(int) $id]);
+
 $active = 'profile';
 $pageTitle = $user['name'] . ' — профиль · ' . APP_NAME;
 require __DIR__ . '/includes/header.php';

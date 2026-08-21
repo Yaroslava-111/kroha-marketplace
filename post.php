@@ -100,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $searchLc,
                 date('Y-m-d H:i:s'),
             ]);
+            notify_saved_searches($pdo, 'item', (int) $pdo->lastInsertId());
             header('Location: item.php?id=' . (int) $pdo->lastInsertId());
             exit;
         }

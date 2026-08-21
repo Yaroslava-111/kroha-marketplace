@@ -188,3 +188,13 @@ CREATE TABLE IF NOT EXISTS view_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_view_history_user ON view_history(user_id, viewed_at);
+
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    params     TEXT NOT NULL,
+    label      TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_saved_searches_user ON saved_searches(user_id, params);

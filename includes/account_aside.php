@@ -18,6 +18,7 @@ $__menu = [
     'bids' => ['Мои ставки', 'account.php?tab=bids'],
     'reviews' => ['Отзывы', 'account.php?tab=reviews'],
     'favorites' => ['Избранное', 'account.php?tab=favorites'],
+    'searches' => ['Поиски', 'account.php?tab=searches'],
     'history' => ['История', 'account.php?tab=history'],
     'settings' => ['Настройки', 'account.php?tab=settings'],
 ];

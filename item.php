@@ -28,6 +28,8 @@ $currentUser = current_user();
 $isOwner = $currentUser && (int) $currentUser['id'] === (int) $item['user_id'];
 $sellerRating = seller_rating($pdo, (int) $item['user_id']);
 $canReview = $currentUser && can_review($pdo, (int) $currentUser['id'], 'item', $id);
+$canonicalUrl = APP_BASE_URL . lot_url('item', (int) $item['id'], (string) $item['title']);
+maybe_redirect_pretty('item', (int) $item['id'], (string) $item['title']);
 
 $favItems = [];
 if ($currentUser) {
@@ -74,6 +76,7 @@ $similar = $pdo->prepare(
 );
 $similar->execute([$item['category'], $id]);
 $similar = $similar->fetchAll();
+$sellerRatings = seller_ratings_map($pdo, array_map(static fn ($r) => (int) $r['user_id'], $similar));
 
 $photos = photos_of($item);
 $isGive = (int) $item['is_giveaway'] === 1;

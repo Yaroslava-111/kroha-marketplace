@@ -2,7 +2,7 @@
 declare(strict_types=1);
 ?>
 <article class="card">
-    <a class="card-media" href="auction.php?id=<?= (int) $a['id'] ?>" aria-label="<?= e($a['title']) ?>">
+    <a class="card-media" href="<?= e(lot_url('auction', (int) $a['id'], (string) $a['title'])) ?>" aria-label="<?= e($a['title']) ?>">
         <img src="<?= e(card_photo($a)) ?>" alt="<?= e($a['title']) ?>" loading="lazy">
         <span class="badge badge-auction">Аукцион</span>
     </a>
@@ -18,7 +18,7 @@ declare(strict_types=1);
         </form>
     <?php endif; ?>
     <div class="card-body">
-        <h3 class="card-title"><a href="auction.php?id=<?= (int) $a['id'] ?>"><?= e($a['title']) ?></a></h3>
+        <h3 class="card-title"><a href="<?= e(lot_url('auction', (int) $a['id'], (string) $a['title'])) ?>"><?= e($a['title']) ?></a></h3>
         <div class="card-price">
             <?= money((int) $a['current_price']) ?>
             <?php if ((int) $a['bid_count'] > 0 && (int) $a['current_price'] !== (int) $a['start_price']): ?>
@@ -30,8 +30,9 @@ declare(strict_types=1);
             <span class="chip"><?= (int) $a['bid_count'] ?> <?= e(plural((int) $a['bid_count'], ['ставка', 'ставки', 'ставок'])) ?></span>
         </div>
         <div class="card-footer">
-            <span class="seller"><?= e($a['seller_city']) ?></span>
-            <a class="btn btn-primary btn-sm card-cta" href="auction.php?id=<?= (int) $a['id'] ?>">Смотреть</a>
+            <?php $__sr = $sellerRatings[(int) $a['user_id']] ?? null; ?>
+            <span class="seller"><?php if ($__sr !== null): ?><span class="rating-chip" title="Рейтинг продавца">★ <?= number_format($__sr['avg'], 1, ',', ' ') ?> <span class="muted">(<?= (int) $__sr['cnt'] ?>)</span></span><?php endif; ?><?= e($a['seller_city']) ?></span>
+            <a class="btn btn-primary btn-sm card-cta" href="<?= e(lot_url('auction', (int) $a['id'], (string) $a['title'])) ?>">Смотреть</a>
         </div>
     </div>
 </article>

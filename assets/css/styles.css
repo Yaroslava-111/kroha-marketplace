@@ -326,6 +326,12 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
 .page-btn.is-disabled { opacity: .45; pointer-events: none; }
 .page-dots { color: var(--ink-soft); font-weight: 700; padding: 0 2px; }
 
+/* Рейтинг продавца в карточке и сохранённые поиски */
+.rating-chip { color: #C98A2D; font-weight: 800; margin-right: 6px; white-space: nowrap; }
+.save-search-form { display: inline-flex; }
+.save-search-btn { white-space: nowrap; }
+.alert-ok { background: #E4EFE1; border: 2px solid #3E5A37; color: #3E5A37; }
+
 /* Buttons */
 .btn {
     display: inline-block; text-decoration: none; cursor: pointer;
