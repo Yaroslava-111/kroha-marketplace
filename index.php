@@ -276,13 +276,13 @@ require __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <?php if (isset($_GET['ss_ok'])): ?>
-    <div class="alert alert-ok">Поиск сохранён — уведомим, когда появятся новые лоты.</div>
+    <div class="alert alert-ok alert-flash">Поиск сохранён — уведомим, когда появятся новые лоты.</div>
 <?php elseif (($_GET['ss_err'] ?? '') === 'exists'): ?>
-    <div class="alert alert-error">Такой поиск уже сохранён — смотрите вкладку «Поиски» в кабинете.</div>
+    <div class="alert alert-error alert-flash">Такой поиск уже сохранён — смотрите вкладку «Поиски» в кабинете.</div>
 <?php elseif (($_GET['ss_err'] ?? '') === 'limit'): ?>
-    <div class="alert alert-error">Можно сохранить не больше 20 поисков. Удалите лишние в кабинете.</div>
+    <div class="alert alert-error alert-flash">Можно сохранить не больше 20 поисков. Удалите лишние в кабинете.</div>
 <?php elseif (($_GET['ss_err'] ?? '') === 'empty'): ?>
-    <div class="alert alert-error">Сначала задайте условия поиска.</div>
+    <div class="alert alert-error alert-flash">Сначала задайте условия поиска.</div>
 <?php endif; ?>
 
 <form class="filters" method="get" id="filtersForm">

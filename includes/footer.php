@@ -1034,5 +1034,38 @@ document.querySelectorAll('.timer[data-end]').forEach(function (el) {
     });
 })();
 </script>
+<script>
+(function () {
+    var FLASH_MS = 4500;
+    function dismiss(el) {
+        if (el.dataset.closing) return;
+        el.dataset.closing = '1';
+        el.classList.add('is-closing');
+        setTimeout(function () { el.remove(); }, 320);
+    }
+    document.querySelectorAll('.alert').forEach(function (el) {
+        el.querySelectorAll('.alert-close').forEach(function (b) { b.remove(); });
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'alert-close';
+        btn.setAttribute('aria-label', 'Закрыть уведомление');
+        btn.textContent = '×';
+        btn.addEventListener('click', function () { dismiss(el); });
+        el.appendChild(btn);
+        if (el.classList.contains('alert-flash')) {
+            setTimeout(function () { dismiss(el); }, FLASH_MS);
+        }
+    });
+    // Убираем флеш-параметры из адресной строки, чтобы F5 не показывал сообщение снова
+    try {
+        var u = new URL(location.href);
+        var dirty = ['ss_ok', 'ss_err', 'ok'].filter(function (p) { return u.searchParams.has(p); });
+        if (dirty.length) {
+            dirty.forEach(function (p) { u.searchParams.delete(p); });
+            history.replaceState(null, '', u.pathname + (u.searchParams.toString() ? '?' + u.searchParams : '') + u.hash);
+        }
+    } catch (err) {}
+})();
+</script>
 </body>
 </html>

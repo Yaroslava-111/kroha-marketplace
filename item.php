@@ -88,11 +88,11 @@ $metaImg = first_photo($item);
 require __DIR__ . '/includes/header.php';
 ?>
     <?php if (($ok = $_GET['ok'] ?? '') === 'review'): ?>
-        <div class="alert alert-ok">Спасибо! Отзыв опубликован.</div>
+        <div class="alert alert-ok alert-flash">Спасибо! Отзыв опубликован.</div>
     <?php elseif ($ok === 'confirm'): ?>
-        <div class="alert alert-ok">Спасибо! Сделка подтверждена.</div>
+        <div class="alert alert-ok alert-flash">Спасибо! Сделка подтверждена.</div>
     <?php elseif ($ok === 'report'): ?>
-        <div class="alert alert-ok">Спасибо! Жалоба отправлена, мы рассмотрим её.</div>
+        <div class="alert alert-ok alert-flash">Спасибо! Жалоба отправлена, мы рассмотрим её.</div>
     <?php endif; ?>
     <?php if (($re = $_GET['review_error'] ?? '') !== ''): ?>
         <div class="alert alert-error"><?= e($re) ?></div>

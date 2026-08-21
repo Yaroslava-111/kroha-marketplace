@@ -306,10 +306,10 @@ require __DIR__ . '/includes/header.php';
                 <div class="alert alert-error"><?= e($actionError) ?></div>
             <?php endif; ?>
             <?php if ($actionOk !== ''): ?>
-                <div class="alert alert-ok"><?= e($actionOk) ?></div>
+                <div class="alert alert-ok alert-flash"><?= e($actionOk) ?></div>
             <?php endif; ?>
             <?php if ($saveOk): ?>
-                <div class="alert alert-ok">Сохранено.</div>
+                <div class="alert alert-ok alert-flash">Сохранено.</div>
             <?php endif; ?>
             <?php if ($editErrors): ?>
                 <div class="alert alert-error">
@@ -319,7 +319,7 @@ require __DIR__ . '/includes/header.php';
                 </div>
             <?php endif; ?>
             <?php if ($okMsg !== ''): ?>
-                <div class="alert alert-ok"><?= e($okMsg) ?></div>
+                <div class="alert alert-ok alert-flash"><?= e($okMsg) ?></div>
             <?php endif; ?>
             <?php if ($reviewErr !== ''): ?>
                 <div class="alert alert-error"><?= e($reviewErr) ?></div>
@@ -759,7 +759,7 @@ require __DIR__ . '/includes/header.php';
                     <a class="btn btn-primary" href="index.php?type=all">Новый поиск</a>
                 </div>
                 <?php if (($_GET['ok'] ?? '') === 'deleted'): ?>
-                    <div class="alert alert-ok">Поиск удалён.</div>
+                    <div class="alert alert-ok alert-flash">Поиск удалён.</div>
                 <?php endif; ?>
 
                 <?php if (!$savedSearches): ?>

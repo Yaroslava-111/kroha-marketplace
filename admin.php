@@ -194,7 +194,7 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 <?php if ($flash !== ''): ?>
-    <div class="alert alert-ok"><?= e($flash) ?></div>
+    <div class="alert alert-ok alert-flash"><?= e($flash) ?></div>
 <?php endif; ?>
 
 <nav class="admin-tabs">
