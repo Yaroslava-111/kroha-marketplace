@@ -132,6 +132,7 @@ $limit = $mode === 'home' ? 4 : 20;
 $perPage = 20;
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $offset = ($page - 1) * $perPage;
+$limitSql = $mode === 'catalog' ? '' : (' LIMIT ' . $limit . ' OFFSET ' . $offset);
 
 [$whereItems, $paramsItems] = where_for($f, 'i.price', 'i.city');
 $extraItems = [];
@@ -143,7 +144,7 @@ $whereItems .= $whereItems === '' ? ' WHERE ' . implode(' AND ', $extraItems) : 
 $countStmt = $pdo->prepare('SELECT COUNT(*) FROM items i' . $whereItems);
 $countStmt->execute($paramsItems);
 $totalItems = (int) $countStmt->fetchColumn();
-$items = $pdo->prepare('SELECT i.* FROM items i' . $whereItems . ' ORDER BY ' . $itemOrder . ' LIMIT ' . $limit . ' OFFSET ' . $offset);
+$items = $pdo->prepare('SELECT i.* FROM items i' . $whereItems . ' ORDER BY ' . $itemOrder . $limitSql);
 $items->execute($paramsItems);
 $items = $items->fetchAll();
 
@@ -162,10 +163,35 @@ $auctions = $pdo->prepare(
      JOIN users u ON u.id = a.user_id
      LEFT JOIN bids b ON b.auction_id = a.id'
     . $statusClause
-    . ' GROUP BY a.id ORDER BY ' . $aucOrder . ' LIMIT ' . $limit . ' OFFSET ' . $offset
+    . ' GROUP BY a.id ORDER BY ' . $aucOrder . $limitSql
 );
 $auctions->execute($paramsAuctions);
 $auctions = $auctions->fetchAll();
+
+$feed = [];
+if ($mode === 'catalog') {
+    foreach ($items as $it) {
+        $it['kind'] = 'item';
+        $it['sort_price'] = (int) $it['price'];
+        $feed[] = $it;
+    }
+    foreach ($auctions as $a) {
+        $a['kind'] = 'auction';
+        $a['sort_price'] = (int) $a['current_price'];
+        $feed[] = $a;
+    }
+    usort($feed, function ($x, $y) use ($sort) {
+        if ($sort === 'price_asc') {
+            return [$x['sort_price'], $y['created_at']] <=> [$y['sort_price'], $x['created_at']];
+        }
+        if ($sort === 'price_desc') {
+            return [$y['sort_price'], $x['created_at']] <=> [$x['sort_price'], $y['created_at']];
+        }
+        return [$y['created_at'], $x['kind']] <=> [$x['created_at'], $y['kind']];
+    });
+    $totalFeed = count($feed);
+    $feed = array_slice($feed, ($page - 1) * $perPage, $perPage);
+}
 
 $cats = categories();
 $seasons = ['всесезон', 'зима', 'весна', 'лето', 'осень'];
@@ -376,6 +402,39 @@ require __DIR__ . '/includes/header.php';
 })();
 </script>
 
+<?php if ($mode === 'catalog'): ?>
+    <section class="catalog-block">
+        <?php if ($feed): ?>
+            <div class="grid">
+                <?php foreach ($feed as $row): ?>
+                    <?php if ($row['kind'] === 'item') {
+                        $it = $row;
+                        require __DIR__ . '/includes/card_item.php';
+                    } else {
+                        $a = $row;
+                        require __DIR__ . '/includes/card_auction.php';
+                    } ?>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <p class="empty">Пока ничего нет. Попробуйте снять фильтры.</p>
+        <?php endif; ?>
+        <?php if ($totalFeed > $perPage): ?>
+            <?php $pagesFeed = max(1, (int) ceil($totalFeed / $perPage)); ?>
+            <nav class="pagination" aria-label="Страницы каталога">
+                <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php else: ?><span class="page-btn is-disabled">← Назад</span><?php endif; ?>
+                <?php for ($p = 1; $p <= $pagesFeed; $p++): ?>
+                    <?php if ($pagesFeed > 7 && $p > 2 && $p < $pagesFeed - 1 && abs($p - $page) > 1): ?>
+                        <?php if (($p === 3 && $page > 4) || ($p === $pagesFeed - 2 && $page < $pagesFeed - 3)): ?><span class="page-dots">…</span><?php endif; ?>
+                        <?php continue; ?>
+                    <?php endif; ?>
+                    <a class="page-btn<?= $p === $page ? ' is-active' : '' ?>" href="<?= e(page_url($p)) ?>"><?= $p ?></a>
+                <?php endfor; ?>
+                <?php if ($page < $pagesFeed): ?><a class="page-btn" href="<?= e(page_url($page + 1)) ?>">Вперёд →</a><?php else: ?><span class="page-btn is-disabled">Вперёд →</span><?php endif; ?>
+            </nav>
+        <?php endif; ?>
+    </section>
+<?php else: ?>
 <?php if ($showItems): ?>
     <section class="catalog-block">
         <div class="section-head">
@@ -395,7 +454,7 @@ require __DIR__ . '/includes/header.php';
         <?php else: ?>
             <p class="empty">Объявлений пока нет. <?= $mode === 'home' ? 'Станьте первым — разместите своё.' : 'Попробуйте снять фильтры.' ?></p>
         <?php endif; ?>
-        <?php if ($showItems && $mode !== 'home' && $totalItems > 0): ?>
+        <?php if ($showItems && $mode !== 'home' && $totalItems > $perPage): ?>
             <?php $pagesItems = max(1, (int) ceil($totalItems / $perPage)); ?>
             <nav class="pagination" aria-label="Страницы объявлений">
                 <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php else: ?><span class="page-btn is-disabled">← Назад</span><?php endif; ?>
@@ -431,7 +490,7 @@ require __DIR__ . '/includes/header.php';
         <?php else: ?>
             <p class="empty">Аукционов пока нет. <?= $mode === 'home' ? 'Загляните позже.' : 'Попробуйте снять фильтры.' ?></p>
         <?php endif; ?>
-        <?php if ($showAuctions && $mode !== 'home' && $totalAuctions > 0): ?>
+        <?php if ($showAuctions && $mode !== 'home' && $totalAuctions > $perPage): ?>
             <?php $pagesAuctions = max(1, (int) ceil($totalAuctions / $perPage)); ?>
             <nav class="pagination" aria-label="Страницы аукционов">
                 <?php if ($page > 1): ?><a class="page-btn" href="<?= e(page_url($page - 1)) ?>">← Назад</a><?php else: ?><span class="page-btn is-disabled">← Назад</span><?php endif; ?>
@@ -446,6 +505,7 @@ require __DIR__ . '/includes/header.php';
             </nav>
         <?php endif; ?>
     </section>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
