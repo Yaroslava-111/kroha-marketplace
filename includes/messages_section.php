@@ -250,7 +250,14 @@ function render_messages_section(PDO $pdo, int $meId): void
                             <?php endif; ?>
                             <div class="msg-bubble">
                                 <div class="msg-text"><?= nl2br(e($m['text'])) ?></div>
-                                <div class="msg-time"><?= e(date('d.m H:i', strtotime($m['created_at']))) ?></div>
+                                <div class="msg-time">
+                                    <?= e(date('d.m H:i', strtotime($m['created_at']))) ?>
+                                    <?php if ((int) $m['sender_id'] === $meId): ?>
+                                        <span class="msg-check<?= (int) $m['is_read'] === 1 ? ' is-read' : '' ?>" title="<?= (int) $m['is_read'] === 1 ? 'Прочитано' : 'Отправлено' ?>">
+                                            <?php if ((int) $m['is_read'] === 1): ?><svg viewBox="0 0 20 12" width="15" height="9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 6.5 5 10.5 12 1.5"/><polyline points="9 8.5 10.5 10.5 19 1.5"/></svg><?php else: ?><svg viewBox="0 0 14 12" width="12" height="9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 6.5 5 10.5 13 1.5"/></svg><?php endif; ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -262,6 +269,7 @@ function render_messages_section(PDO $pdo, int $meId): void
                     <input type="hidden" name="conv_id" value="<?= (int) $activeConv['id'] ?>">
                     <div class="chat-compose-wrap">
                         <textarea id="msgText" name="text" rows="1" maxlength="2000" placeholder="Сообщение…" required></textarea>
+                        <span class="chat-count" id="chatCount" aria-live="polite"></span>
                         <button class="chat-send" type="submit" aria-label="Отправить" title="Отправить">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                         </button>
@@ -295,6 +303,15 @@ function render_messages_section(PDO $pdo, int $meId): void
             msgInput.style.height = 'auto';
             msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
         });
+        var chatCount = document.getElementById('chatCount');
+        if (chatCount) {
+            var updCount = function () {
+                var left = 2000 - msgInput.value.length;
+                chatCount.textContent = left <= 400 ? String(left) : '';
+                chatCount.classList.toggle('is-warn', left <= 100);
+            };
+            msgInput.addEventListener('input', updCount);
+        }
         msgInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
