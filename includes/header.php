@@ -24,6 +24,8 @@ $unreadMsgs = $currentUser ? unread_messages_count($pdo, (int) $currentUser['id'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php // База для относительных путей: на ЧПУ-адресах (/item/22-slug) без неё ломаются CSS, fetch() и формы. ?>
+    <base href="/">
     <title><?= e($pageTitle) ?></title>
     <meta name="description" content="<?= e($metaDesc) ?>">
     <meta property="og:site_name" content="<?= e(APP_NAME) ?>">
