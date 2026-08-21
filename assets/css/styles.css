@@ -1490,7 +1490,8 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
         padding: 10px 6px;
     }
     .chat-app.side-collapsed .chat-side-title,
-    .chat-app.side-collapsed .msg-row-main { display: none; }
+    .chat-app.side-collapsed .msg-row-main,
+    .chat-app.side-collapsed .msg-list .empty { display: none; }
     .chat-app.side-collapsed .chat-side-toggle { margin-left: 0; flex-direction: column; gap: 8px; }
     .chat-app.side-collapsed .msg-row { justify-content: center; padding: 8px 6px; }
     .chat-app.side-collapsed .avatar { width: 40px; height: 40px; font-size: 15px; }
