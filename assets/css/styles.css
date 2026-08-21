@@ -831,22 +831,25 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
 }
 .alert-close:hover { opacity: 1; }
 
-/* Временные уведомления — плавающий тост с обратным отсчётом */
+/* Временные уведомления — белый тост в правом нижнем углу с обратным отсчётом */
 .alert-flash {
     position: fixed;
-    top: 14px;
-    left: 0;
-    right: 0;
-    margin: 0 auto;
+    right: 16px;
+    bottom: 16px;
+    left: auto;
     width: fit-content;
-    max-width: min(92vw, 560px);
+    max-width: min(92vw, 440px);
     z-index: 1200;
     margin-bottom: 0;
-    box-shadow: 0 10px 30px rgba(44, 34, 22, .22);
+    background: #fff;
+    border: 0;
+    color: var(--ink);
+    box-shadow: 0 8px 28px rgba(44, 34, 22, .18), 0 2px 8px rgba(44, 34, 22, .10);
     overflow: hidden;
-    padding-right: 12px;
-    backdrop-filter: blur(2px);
+    padding: 14px 14px 15px;
+    animation: flash-in .3s cubic-bezier(.21, 1.02, .55, 1) both;
 }
+.alert-flash::before { font-size: 18px; }
 .alert-flash::after {
     content: '';
     position: absolute;
@@ -855,20 +858,31 @@ a.notice:hover .notice-arrow { opacity: 1; transform: translateX(0); }
     height: 3px;
     width: 100%;
     background: currentColor;
-    opacity: .4;
+    opacity: .45;
     transform-origin: left;
     animation: alert-countdown var(--flash-ms, 4500ms) linear forwards;
 }
+.alert-ok.alert-flash::after { color: var(--sage); }
+.alert-error.alert-flash::after { color: var(--urgent); }
 
-.alert-flash.is-closing, .alert.is-closing { animation: alert-out .3s ease-in forwards; }
+.alert-flash.is-closing { animation: flash-out .3s ease-in forwards; }
+.alert.is-closing { animation: alert-out .3s ease-in forwards; }
 
+@keyframes flash-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes flash-out {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(12px) scale(.97); }
+}
 @keyframes alert-in {
     from { opacity: 0; transform: translateY(-6px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes alert-out {
     from { opacity: 1; transform: translateY(0); max-height: 200px; margin-bottom: 16px; }
-    to   { opacity: 0; transform: translateY(-14px) scale(.97); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+    to   { opacity: 0; transform: translateY(-8px); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
 }
 @keyframes alert-countdown {
     from { transform: scaleX(1); }
