@@ -1068,5 +1068,23 @@ document.querySelectorAll('.timer[data-end]').forEach(function (el) {
     } catch (err) {}
 })();
 </script>
+<button class="scroll-top" id="scrollTop" type="button" aria-label="Наверх" title="Наверх" hidden>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+</button>
+<script>
+(function () {
+    var btn = document.getElementById('scrollTop');
+    if (!btn) return;
+    function onScroll() {
+        var chatFs = document.querySelector('.chat-app.is-fullscreen');
+        btn.hidden = window.scrollY < 350 || !!chatFs;
+    }
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    btn.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+})();
+</script>
 </body>
 </html>

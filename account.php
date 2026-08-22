@@ -26,6 +26,10 @@ if ($tab === 'favorites' && !in_array($sub, ['items', 'auctions'], true)) {
 define('MESSAGES_EMBEDDED', true);
 require __DIR__ . '/includes/messages_section.php';
 
+if ($tab === 'messages' && ($_GET['poll'] ?? '') === '1') {
+    messages_poll_respond($pdo, $meId);
+}
+
 $actionOk = '';
 $actionError = '';
 $saveOk = false;

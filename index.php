@@ -464,7 +464,13 @@ require __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
-            <p class="empty">Пока ничего нет. Попробуйте снять фильтры.</p>
+            <?php $noResultHasFilters = (bool) array_intersect_key($_GET, array_flip(['q', 'category', 'age_min', 'age_max', 'size', 'season', 'city', 'price_min', 'price_max', 'used'])); ?>
+            <div class="empty-state">
+                <p class="empty">Ничего не найдено по этим фильтрам.</p>
+                <?php if ($noResultHasFilters): ?>
+                    <a class="btn btn-secondary btn-sm" href="index.php?type=<?= urlencode((string) ($_GET['type'] ?? 'all')) ?><?= isset($_GET['sort']) ? '&amp;sort=' . urlencode((string) $_GET['sort']) : '' ?>">Сбросить фильтры</a>
+                <?php endif; ?>
+            </div>
         <?php endif; ?>
         <?php if ($totalFeed > $perPage): ?>
             <?php $pagesFeed = max(1, (int) ceil($totalFeed / $perPage)); ?>

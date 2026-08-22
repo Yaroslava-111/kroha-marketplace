@@ -144,10 +144,16 @@ require __DIR__ . '/includes/header.php';
                         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                         <input type="hidden" name="toggle_fav" value="item">
                         <button class="card-fav<?= in_array($id, $favItems, true) ? ' is-fav' : '' ?>" type="submit" aria-label="<?= in_array($id, $favItems, true) ? 'Убрать из избранного' : 'В избранное' ?>">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 1 0-7.78z"/></svg>
                         </button>
                     </form>
                 <?php endif; ?>
+                <span class="item-tags-share">
+                    <button class="icon-btn copy-link-btn" type="button" data-copy-link title="Скопировать ссылку" aria-label="Скопировать ссылку на объявление">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    </button>
+                    <span class="copy-hint" id="copyHint" hidden>Ссылка скопирована</span>
+                </span>
             </div>
             <h1 class="item-title"><?= e($item['title']) ?></h1>
             <div class="item-price"><?= $isGive ? 'Отдам даром' : money((int) $item['price']) ?></div>
@@ -302,5 +308,31 @@ require __DIR__ . '/includes/header.php';
             btn.classList.add('is-active');
         });
     });
+    var copyBtn = document.querySelector('[data-copy-link]');
+    if (copyBtn) {
+        var copyHint = document.getElementById('copyHint');
+        var showCopyHint = function () {
+            if (!copyHint) return;
+            copyHint.hidden = false;
+            setTimeout(function () { copyHint.hidden = true; }, 1800);
+        };
+        var copyFallback = function () {
+            var ta = document.createElement('textarea');
+            ta.value = location.href;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); showCopyHint(); } catch (e) {}
+            ta.remove();
+        };
+        copyBtn.addEventListener('click', function () {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(location.href).then(showCopyHint).catch(copyFallback);
+            } else {
+                copyFallback();
+            }
+        });
+    }
     </script>
 <?php require __DIR__ . '/includes/footer.php'; ?>

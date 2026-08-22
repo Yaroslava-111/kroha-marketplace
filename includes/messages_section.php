@@ -63,6 +63,100 @@ function messages_post(PDO $pdo, int $meId): void
     exit;
 }
 
+function messages_poll_respond(PDO $pdo, int $meId): void
+{
+    header('Content-Type: application/json; charset=utf-8');
+
+    $stmt = $pdo->prepare(
+        'SELECT c.id,
+                (SELECT COUNT(*) FROM messages mm WHERE mm.conversation_id = c.id AND mm.sender_id != ? AND mm.is_read = 0) AS unread
+         FROM conversations c
+         WHERE (c.buyer_id = ? OR c.seller_id = ?) AND c.archived_at IS NULL'
+    );
+    $stmt->execute([$meId, $meId, $meId]);
+    $convsUnread = [];
+    foreach ($stmt->fetchAll() as $c) {
+        $convsUnread[(int) $c['id']] = (int) $c['unread'];
+    }
+    $unreadTotal = array_sum($convsUnread);
+
+    $threadHtml = '';
+    $convId = (int) ($_GET['id'] ?? 0);
+    if ($convId > 0) {
+        $convStmt = $pdo->prepare('SELECT * FROM conversations WHERE id = ?');
+        $convStmt->execute([$convId]);
+        $candidate = $convStmt->fetch();
+        if ($candidate && ((int) $candidate['buyer_id'] === $meId || (int) $candidate['seller_id'] === $meId)) {
+            $pdo->prepare('UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND sender_id != ? AND is_read = 0')
+                ->execute([$convId, $meId]);
+            $msgStmt = $pdo->prepare(
+                'SELECT m.*, u.name AS sender_name FROM messages m JOIN users u ON u.id = m.sender_id
+                 WHERE m.conversation_id = ? ORDER BY m.created_at ASC, m.id ASC'
+            );
+            $msgStmt->execute([$convId]);
+            ob_start();
+            chat_render_thread($msgStmt->fetchAll(), $meId);
+            $threadHtml = ob_get_clean();
+        }
+    }
+
+    echo json_encode([
+        'unreadTotal' => $unreadTotal,
+        'convs' => $convsUnread,
+        'thread' => $threadHtml,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function chat_render_thread(array $messages, int $meId): void
+{
+    if (!$messages) {
+        echo '<p class="empty">Сообщений пока нет. Напишите первым — например, спросите о состоянии и возможности встречи.</p>';
+        return;
+    }
+    $prevDay = '';
+    $prevSender = null;
+    $total = count($messages);
+    foreach ($messages as $i => $m):
+        $day = date('Y-m-d', strtotime($m['created_at']));
+        if ($day !== $prevDay):
+            $prevDay = $day;
+            $prevSender = null;
+            $dayLabel = date('d.m.Y', strtotime($m['created_at']));
+            if ($day === date('Y-m-d')) {
+                $dayLabel = 'Сегодня';
+            } elseif ($day === date('Y-m-d', strtotime('-1 day'))) {
+                $dayLabel = 'Вчера';
+            }
+    ?>
+        <div class="msg-day"><span><?= e($dayLabel) ?></span></div>
+    <?php endif; ?>
+        <?php
+        $isMine = (int) $m['sender_id'] === $meId;
+        $isFirst = $prevSender !== (int) $m['sender_id'];
+        $isLast = $i + 1 >= $total || ((int) $messages[$i + 1]['sender_id'] !== (int) $m['sender_id'])
+            || date('Y-m-d', strtotime($messages[$i + 1]['created_at'])) !== $day;
+        $prevSender = (int) $m['sender_id'];
+        ?>
+        <div class="msg-line is-<?= $isMine ? 'mine' : 'other' ?><?= $isFirst ? ' is-first' : '' ?><?= $isLast ? ' is-last' : '' ?>">
+            <?php if (!$isMine && $isLast): ?>
+                <span class="avatar avatar-xs"><?= e(initials((string) $m['sender_name'])) ?></span>
+            <?php endif; ?>
+            <div class="msg-bubble">
+                <div class="msg-text"><?= nl2br(e($m['text'])) ?></div>
+                <div class="msg-time">
+                    <?= e(date('d.m H:i', strtotime($m['created_at']))) ?>
+                    <?php if ($isMine): ?>
+                        <span class="msg-check<?= (int) $m['is_read'] === 1 ? ' is-read' : '' ?>" title="<?= (int) $m['is_read'] === 1 ? 'Прочитано' : 'Отправлено' ?>">
+                            <?php if ((int) $m['is_read'] === 1): ?><svg viewBox="0 0 20 12" width="15" height="9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 6.5 5 10.5 12 1.5"/><polyline points="9 8.5 10.5 10.5 19 1.5"/></svg><?php else: ?><svg viewBox="0 0 14 12" width="12" height="9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 6.5 5 10.5 13 1.5"/></svg><?php endif; ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    <?php endforeach;
+}
+
 function render_messages_section(PDO $pdo, int $meId): void
 {
     $inArchive = (string) ($_GET['view'] ?? '') === 'archive';
@@ -128,6 +222,7 @@ function render_messages_section(PDO $pdo, int $meId): void
     }
 
     $base = messages_base();
+
     ?>
     <div class="chat-app<?= $activeConv ? ' has-conv' : '' ?>">
         <aside class="chat-side">
@@ -232,41 +327,7 @@ function render_messages_section(PDO $pdo, int $meId): void
                 </header>
 
                 <div class="chat-thread" id="chatThread" aria-live="polite">
-                    <?php if (!$messages): ?>
-                        <p class="empty">Сообщений пока нет. Напишите первым — например, спросите о состоянии и возможности встречи.</p>
-                    <?php endif; ?>
-                    <?php
-                    $prevDay = '';
-                    foreach ($messages as $m):
-                        $day = date('Y-m-d', strtotime($m['created_at']));
-                        if ($day !== $prevDay):
-                            $prevDay = $day;
-                            $dayLabel = date('d.m.Y', strtotime($m['created_at']));
-                            if ($day === date('Y-m-d')) {
-                                $dayLabel = 'Сегодня';
-                            } elseif ($day === date('Y-m-d', strtotime('-1 day'))) {
-                                $dayLabel = 'Вчера';
-                            }
-                    ?>
-                        <div class="msg-day"><span><?= e($dayLabel) ?></span></div>
-                    <?php endif; ?>
-                        <div class="msg-line is-<?= (int) $m['sender_id'] === $meId ? 'mine' : 'other' ?>">
-                            <?php if ((int) $m['sender_id'] !== $meId): ?>
-                                <span class="avatar avatar-xs"><?= e(initials((string) $m['sender_name'])) ?></span>
-                            <?php endif; ?>
-                            <div class="msg-bubble">
-                                <div class="msg-text"><?= nl2br(e($m['text'])) ?></div>
-                                <div class="msg-time">
-                                    <?= e(date('d.m H:i', strtotime($m['created_at']))) ?>
-                                    <?php if ((int) $m['sender_id'] === $meId): ?>
-                                        <span class="msg-check<?= (int) $m['is_read'] === 1 ? ' is-read' : '' ?>" title="<?= (int) $m['is_read'] === 1 ? 'Прочитано' : 'Отправлено' ?>">
-                                            <?php if ((int) $m['is_read'] === 1): ?><svg viewBox="0 0 20 12" width="15" height="9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 6.5 5 10.5 12 1.5"/><polyline points="9 8.5 10.5 10.5 19 1.5"/></svg><?php else: ?><svg viewBox="0 0 14 12" width="12" height="9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 6.5 5 10.5 13 1.5"/></svg><?php endif; ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+                    <?php chat_render_thread($messages, $meId); ?>
                     <div id="msgEnd"></div>
                 </div>
 
@@ -384,6 +445,81 @@ function render_messages_section(PDO $pdo, int $meId): void
             };
             msgInput.addEventListener('input', updCount);
         }
+        var draftConvId = msgForm.querySelector('input[name="conv_id"]');
+        var draftKeyValue = draftConvId ? draftConvId.value : '';
+        if (draftKeyValue) {
+            var draftKey = 'kroha_draft_' + draftKeyValue;
+            try {
+                var savedDraft = localStorage.getItem(draftKey);
+                if (savedDraft && !msgInput.value) {
+                    msgInput.value = savedDraft;
+                    msgInput.dispatchEvent(new Event('input'));
+                }
+            } catch (e) {}
+            msgInput.addEventListener('input', function () {
+                try {
+                    if (msgInput.value) { localStorage.setItem(draftKey, msgInput.value); }
+                    else { localStorage.removeItem(draftKey); }
+                } catch (e) {}
+            });
+            msgForm.addEventListener('submit', function () {
+                try { localStorage.removeItem(draftKey); } catch (e) {}
+            });
+        }
+    }
+
+    var convIdInput = document.querySelector('.chat-compose input[name="conv_id"]');
+    var activeConvId = convIdInput ? convIdInput.value : '';
+    var baseTitle = document.title;
+    var pollTimer = null;
+
+    function applyPollState(data) {
+        var navBadge = document.querySelector('.nav-badge-msg');
+        if (navBadge) {
+            navBadge.textContent = data.unreadTotal;
+            navBadge.classList.toggle('is-empty', data.unreadTotal === 0);
+            navBadge.setAttribute('data-count', data.unreadTotal);
+        }
+        document.title = data.unreadTotal > 0 ? '(' + data.unreadTotal + ') ' + baseTitle : baseTitle;
+        document.querySelectorAll('.msg-row').forEach(function (row) {
+            var href = row.getAttribute('href') || '';
+            var m = href.match(/id=(\d+)/);
+            if (!m) { return; }
+            var n = data.convs[m[1]] || 0;
+            row.classList.toggle('is-unread', n > 0);
+            var badge = row.querySelector('.msg-badge');
+            if (n > 0 && !badge) {
+                badge = document.createElement('span');
+                badge.className = 'msg-badge';
+                row.appendChild(badge);
+            }
+            if (badge) {
+                badge.textContent = n;
+                if (n === 0 && !row.querySelector(':scope > .msg-badge[data-static]')) { badge.remove(); }
+            }
+        });
+        var threadEl = document.getElementById('chatThread');
+        if (threadEl && data.thread !== '') {
+            var nearBottom = threadEl.scrollHeight - threadEl.scrollTop - threadEl.clientHeight < 90;
+            var endEl = document.getElementById('msgEnd');
+            threadEl.innerHTML = data.thread;
+            if (endEl) { threadEl.appendChild(endEl); }
+            if (nearBottom) { threadEl.scrollTop = threadEl.scrollHeight; }
+        }
+    }
+
+    function pollChat() {
+        if (document.hidden) { return; }
+        var url = 'account.php?tab=messages&poll=1' + (activeConvId ? '&id=' + encodeURIComponent(activeConvId) : '');
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (data) { if (data) { applyPollState(data); } })
+            .catch(function () {});
+    }
+    if (window.fetch) {
+        setInterval(pollChat, 12000);
+    }
+    if (msgForm && msgInput) {
         msgInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
